@@ -1,26 +1,13 @@
 import bcrypt from "bcryptjs";
 import config from "../config";
 
-export const BCRYPT_MAX_BYTES = 72;
-
-export const passwordFitsBcrypt = (password: string): boolean => {
-	return Buffer.byteLength(password, "utf8") <= BCRYPT_MAX_BYTES;
-};
-
-export const hashPassword = async (password: string): Promise<string> => {
-	if (!passwordFitsBcrypt(password)) {
-		throw new Error("Password exceeds the bcrypt 72-byte limit.");
-	}
+export const hashPassword = (password: string): Promise<string> => {
 	return bcrypt.hash(password, Number(config.bcrypt_salt_rounds));
 };
 
-export const verifyPassword = async (
+export const verifyPassword = (
 	password: string,
 	passwordHash: string,
 ): Promise<boolean> => {
-	if (!passwordFitsBcrypt(password)) return false;
 	return bcrypt.compare(password, passwordHash);
 };
-
-export const DUMMY_PASSWORD_HASH =
-	"$2b$12$cGfy0r41Aj2pPUB6SOGU0.jUrqCtSAsG6cuG7bGggcSfG92fguqTW";

@@ -1,10 +1,10 @@
-import type { NextFunction, Request, Response } from "express";
+import httpStatus from "http-status";
 import type { Role } from "../../../generated/prisma/enums";
+import config from "../config";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
-import { ACCESS_TOKEN_COOKIE } from "../utils/cookie";
-import { verifyAccessToken } from "../utils/jwt";
+import { jwtUtils } from "../utils/jwt";
 
 export type AuthUser = {
 	id: string;
@@ -21,113 +21,95 @@ declare global {
 	}
 }
 
-const extractAccessToken = (req: Request): string | null => {
-	const cookieToken = req.cookies?.[ACCESS_TOKEN_COOKIE];
-	if (typeof cookieToken === "string" && cookieToken.length > 0) {
-		return cookieToken;
-	}
+const getToken = (req: {
+	cookies?: { accessToken?: string };
+	headers: { authorization?: string };
+}): string | null => {
+	const token = req.cookies?.accessToken
+		? req.cookies.accessToken
+		: req.headers.authorization?.startsWith("Bearer ")
+			? req.headers.authorization.split(" ")[1]
+			: req.headers.authorization;
 
-	const header = req.headers.authorization;
-	if (!header) return null;
-
-	const [scheme, value] = header.split(" ");
-	if (scheme?.toLowerCase() !== "bearer" || !value) return null;
-
-	return value;
+	return token ?? null;
 };
 
-export const requireAuth = catchAsync(
-	async (req: Request, _res: Response, next: NextFunction) => {
-		const token = extractAccessToken(req);
+export const requireAuth = catchAsync(async (req, _res, next) => {
+	const token = getToken(req);
 
-		if (!token) {
-			throw AppError.unauthorized(
-				"You are not logged in. Please log in to continue.",
-			);
-		}
+	if (!token) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"You are not logged in. Please log in to continue.",
+		);
+	}
 
-		const verified = verifyAccessToken(token);
+	const verified = jwtUtils.verifyToken(token, config.jwt_access_secret);
 
-		if (!verified.ok) {
-			throw AppError.unauthorized(
-				verified.reason === "Token has expired"
-					? "Your session has expired. Please log in again."
-					: "Invalid authentication token.",
-			);
-		}
+	if (!verified.success || !verified.data) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Your session has expired or is invalid. Please log in again.",
+		);
+	}
 
-		const { sub, tv } = verified.payload;
+	const { userId, tv } = verified.data as { userId: string; tv: number };
 
-		const user = await prisma.user.findUnique({
-			where: { id: sub },
-			select: {
-				id: true,
-				name: true,
-				email: true,
-				role: true,
-				status: true,
-				isDeleted: true,
-				emailVerified: true,
-				tokenVersion: true,
-			},
-		});
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: {
+			id: true,
+			name: true,
+			email: true,
+			role: true,
+			status: true,
+			isDeleted: true,
+			emailVerified: true,
+			tokenVersion: true,
+		},
+	});
 
-		if (!user || user.isDeleted || user.status === "DELETED") {
-			throw AppError.unauthorized("This account is no longer available.");
-		}
+	if (!user || user.isDeleted || user.status === "DELETED") {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"This account is no longer available.",
+		);
+	}
 
-		if (user.status === "BLOCKED") {
-			throw AppError.forbidden(
-				"Your account has been blocked. Please contact an administrator.",
-			);
-		}
+	if (user.status === "BLOCKED") {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account has been blocked. Please contact an administrator.",
+		);
+	}
 
-		if (!user.emailVerified) {
-			throw AppError.forbidden(
-				"Your email address is not verified. Please verify it to continue.",
-			);
-		}
+	if (!user.emailVerified) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your email address is not verified. Please verify it to continue.",
+		);
+	}
 
-		if (user.tokenVersion !== tv) {
-			throw AppError.unauthorized(
-				"Your session is no longer valid. Please log in again.",
-			);
-		}
+	if (user.tokenVersion !== tv) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Your session is no longer valid. Please log in again.",
+		);
+	}
 
-		req.user = {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			role: user.role,
-		};
-
-		next();
-	},
-);
-
-export const requireRole =
-	(...roles: Role[]) =>
-	(req: Request, _res: Response, next: NextFunction) => {
-		if (!req.user) {
-			next(AppError.unauthorized());
-			return;
-		}
-
-		if (!roles.includes(req.user.role)) {
-			next(
-				AppError.forbidden(
-					"You do not have permission to perform this action.",
-				),
-			);
-			return;
-		}
-
-		next();
+	req.user = {
+		id: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
 	};
+
+	next();
+});
 
 export const currentUser = (req: { user?: AuthUser }): AuthUser => {
 	if (!req.user) {
-		throw AppError.unauthorized();
+		throw new AppError(httpStatus.UNAUTHORIZED, "Authentication is required.");
 	}
 	return req.user;
 };

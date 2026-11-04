@@ -1,9 +1,6 @@
-import type { Prisma } from "../../generated/prisma/client";
-import config from "../../src/app/config";
-import { prisma } from "../../src/app/lib/prisma";
-import type { SeedIncident, SeedIncidentsResult } from "./seed.types";
+import type { SeedIncident } from "./seed.types";
 
-const demoIncidents: SeedIncident[] = [
+export const demoIncidents: SeedIncident[] = [
 	{
 		title: "Harassment near Central Bus Stand",
 		description:
@@ -76,73 +73,3 @@ const demoIncidents: SeedIncident[] = [
 		reviewNote: "Duplicate of an existing report.",
 	},
 ];
-
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
-export const seedIncidents = async (): Promise<SeedIncidentsResult> => {
-	const reporter = await prisma.user.findUnique({
-		where: { email: normalizeEmail(config.seed_user_email) },
-		select: { id: true },
-	});
-
-	const admin = await prisma.user.findUnique({
-		where: { email: normalizeEmail(config.seed_admin_email) },
-		select: { id: true },
-	});
-
-	if (!reporter) {
-		return { created: 0, existing: 0, skipped: demoIncidents.length };
-	}
-
-	let created = 0;
-	let existing = 0;
-
-	for (const incident of demoIncidents) {
-		const current = await prisma.incident.findFirst({
-			where: { title: incident.title, reporterId: reporter.id },
-			select: { id: true },
-		});
-
-		if (current) {
-			existing += 1;
-			continue;
-		}
-
-		const reviewedById = incident.status === "PENDING" ? null : admin?.id ?? null;
-
-		const data: Prisma.IncidentUncheckedCreateInput = {
-			title: incident.title,
-			description: incident.description,
-			category: incident.category,
-			status: incident.status,
-			area: incident.area,
-			location: incident.location ?? null,
-			latitude: incident.latitude ?? null,
-			longitude: incident.longitude ?? null,
-			incidentDate: incident.incidentDate,
-			imageUrl: incident.imageUrl ?? null,
-			reporterId: reporter.id,
-			reviewedById,
-			reviewedAt: reviewedById ? new Date() : null,
-			reviewNote: reviewedById ? (incident.reviewNote ?? null) : null,
-		};
-
-		const createdIncident = await prisma.incident.create({ data });
-
-		await prisma.incidentHistory.create({
-			data: {
-				incidentId: createdIncident.id,
-				changedById: reviewedById ?? reporter.id,
-				previousStatus: null,
-				newStatus: incident.status,
-				note: reviewedById
-					? (incident.reviewNote ?? "Reviewed by a moderator.")
-					: "Submitted by the reporter.",
-			},
-		});
-
-		created += 1;
-	}
-
-	return { created, existing, skipped: 0 };
-};

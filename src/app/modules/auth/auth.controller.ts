@@ -1,15 +1,9 @@
 import httpStatus from "http-status";
 import { currentUser } from "../../middlewares/auth";
 import { catchAsync } from "../../utils/catchAsync";
-import {
-	REFRESH_TOKEN_COOKIE,
-	clearAuthCookies,
-	setAuthCookies,
-} from "../../utils/cookie";
+import { clearAuthCookies, setAuthCookies } from "../../utils/cookie";
 import { sendResponse } from "../../utils/sendResponse";
 import type {
-	IClientMeta,
-	IChangePasswordPayload,
 	IForgotPasswordPayload,
 	ILoginPayload,
 	IRegisterPayload,
@@ -19,22 +13,6 @@ import type {
 } from "./auth.interface";
 import { AuthService } from "./auth.service";
 
-type RequestLike = {
-	get: (name: string) => string | undefined;
-	ip?: string;
-	cookies?: Record<string, unknown>;
-};
-
-const clientMeta = (req: RequestLike): IClientMeta => ({
-	userAgent: req.get("user-agent") ?? null,
-	ipAddress: req.ip ?? null,
-});
-
-const getRefreshToken = (req: Pick<RequestLike, "cookies">): string | null => {
-	const token = req.cookies?.[REFRESH_TOKEN_COOKIE];
-	return typeof token === "string" && token.length > 0 ? token : null;
-};
-
 const register = catchAsync(async (req, res) => {
 	const result = await AuthService.register(req.body as IRegisterPayload);
 
@@ -42,24 +20,21 @@ const register = catchAsync(async (req, res) => {
 		statusCode: httpStatus.CREATED,
 		success: true,
 		message:
-			"Verification code sent. Please check your email to verify your account.",
+			"Verification OTP sent to your email. Please verify your email to complete the registration process.",
 		data: result,
 	});
 });
 
 const verifyEmail = catchAsync(async (req, res) => {
-	const result = await AuthService.verifyEmail(
-		req.body as IVerifyEmailPayload,
-		clientMeta(req),
-	);
+	const result = await AuthService.verifyEmail(req.body as IVerifyEmailPayload);
 
 	setAuthCookies(res, result);
 
 	sendResponse(res, {
 		statusCode: httpStatus.CREATED,
 		success: true,
-		message: "Email verified successfully. Welcome to SafePath.",
-		data: result,
+		message: "User registered and email verified successfully.",
+		// data: result,
 	});
 });
 
@@ -71,51 +46,44 @@ const resendRegistrationOtp = catchAsync(async (req, res) => {
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "A new verification code has been sent to your email.",
+		message: "A new verification OTP has been sent to your email.",
 		data: result,
 	});
 });
 
 const login = catchAsync(async (req, res) => {
-	const result = await AuthService.login(
-		req.body as ILoginPayload,
-		clientMeta(req),
-	);
+	const result = await AuthService.login(req.body as ILoginPayload);
 
 	setAuthCookies(res, result);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Logged in successfully.",
+		message: "User logged in successfully.",
 		data: result,
 	});
 });
 
 const refreshToken = catchAsync(async (req, res) => {
-	const result = await AuthService.refresh(
-		getRefreshToken(req),
-		clientMeta(req),
-	);
+	const result = await AuthService.refresh(req.cookies.refreshToken ?? null);
 
 	setAuthCookies(res, result);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Session refreshed successfully.",
+		message: "New tokens generated successfully.",
 		data: result,
 	});
 });
 
-const logout = catchAsync(async (req, res) => {
-	await AuthService.logout(getRefreshToken(req));
+const logout = catchAsync(async (_req, res) => {
 	clearAuthCookies(res);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Logged out successfully.",
+		message: "User logged out successfully.",
 	});
 });
 
@@ -125,7 +93,7 @@ const getMe = catchAsync(async (req, res) => {
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Profile retrieved successfully.",
+		message: "User profile fetched successfully.",
 		data: user,
 	});
 });
@@ -160,30 +128,11 @@ const resendForgotPasswordOtp = catchAsync(async (req, res) => {
 
 const resetPassword = catchAsync(async (req, res) => {
 	await AuthService.resetPassword(req.body as IResetPasswordPayload);
-	clearAuthCookies(res);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message:
-			"Password reset successfully. Please log in with your new password.",
-	});
-});
-
-const changePassword = catchAsync(async (req, res) => {
-	const result = await AuthService.changePassword(
-		currentUser(req).id,
-		req.body as IChangePasswordPayload,
-		clientMeta(req),
-	);
-
-	setAuthCookies(res, result);
-
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Password changed successfully.",
-		data: result,
+		message: "Password has been reset successfully.",
 	});
 });
 
@@ -198,5 +147,4 @@ export const AuthController = {
 	forgotPassword,
 	resendForgotPasswordOtp,
 	resetPassword,
-	changePassword,
 };

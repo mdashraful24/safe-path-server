@@ -1,94 +1,40 @@
-import { createHash, randomUUID } from "node:crypto";
-import jwt, { type SignOptions } from "jsonwebtoken";
+import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
 import type { Role } from "../../../generated/prisma/enums";
-import config from "../config";
 
-export type AccessTokenPayload = {
-	sub: string;
-	email: string;
+export type TokenPayload = {
+	userId: string;
 	name: string;
+	email: string;
 	role: Role;
-
 	tv: number;
-	type: "access";
 };
 
-export type RefreshTokenPayload = {
-	sub: string;
-
-	jti: string;
-	tv: number;
-	type: "refresh";
-};
-
-type VerifyResult<T> = { ok: true; payload: T } | { ok: false; reason: string };
-
-const issuer = process.env.JWT_ISSUER || "safepath-api";
-const audience = process.env.JWT_AUDIENCE || "safepath-web";
-
-const commonOptions: SignOptions = {
-	algorithm: "HS256",
-	issuer,
-	audience,
-};
-
-export const signAccessToken = (payload: AccessTokenPayload): string => {
-	return jwt.sign(payload, config.jwt_access_secret, {
-		...commonOptions,
-		expiresIn: config.jwt_access_expires_in as SignOptions["expiresIn"],
-	});
-};
-
-export const signRefreshToken = (payload: RefreshTokenPayload): string => {
-	const { jti, ...claims } = payload;
-
-	return jwt.sign(claims, config.jwt_refresh_secret, {
-		...commonOptions,
-		expiresIn: config.jwt_refresh_expires_in as SignOptions["expiresIn"],
-		jwtid: jti,
-	});
-};
-
-const verify = <T extends { type: string }>(
-	token: string,
+const createToken = (
+	payload: TokenPayload,
 	secret: string,
-	expectedType: T["type"],
-): VerifyResult<T> => {
+	expiresIn: string | number,
+) => {
+	return jwt.sign(payload, secret, { expiresIn } as SignOptions);
+};
+
+const verifyToken = (token: string, secret: string) => {
 	try {
-		const decoded = jwt.verify(token, secret, {
-			algorithms: ["HS256"],
-			issuer,
-			audience,
-		});
+		const verifiedToken = jwt.verify(token, secret) as JwtPayload;
 
-		if (typeof decoded === "string") {
-			return { ok: false, reason: "Unexpected token payload" };
-		}
-
-		if (decoded.type !== expectedType) {
-			return { ok: false, reason: "Unexpected token type" };
-		}
-
-		return { ok: true, payload: decoded as unknown as T };
-	} catch (error) {
-		if (error instanceof jwt.TokenExpiredError) {
-			return { ok: false, reason: "Token has expired" };
-		}
-		if (error instanceof jwt.JsonWebTokenError) {
-			return { ok: false, reason: "Token is invalid" };
-		}
-		return { ok: false, reason: "Token could not be verified" };
+		return {
+			success: true,
+			data: verifiedToken,
+		};
+	} catch (error: unknown) {
+		return {
+			success: false,
+			error:
+				error instanceof Error ? error.message : "Token verification failed",
+		};
 	}
 };
 
-export const verifyAccessToken = (token: string) =>
-	verify<AccessTokenPayload>(token, config.jwt_access_secret, "access");
-
-export const verifyRefreshToken = (token: string) =>
-	verify<RefreshTokenPayload>(token, config.jwt_refresh_secret, "refresh");
-
-export const hashToken = (token: string): string => {
-	return createHash("sha256").update(token).digest("hex");
+export const jwtUtils = {
+	createToken,
+	verifyToken,
 };
-
-export const createSessionId = (): string => randomUUID();

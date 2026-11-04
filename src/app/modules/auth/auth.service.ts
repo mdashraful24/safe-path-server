@@ -1,64 +1,31 @@
 import { randomInt } from "node:crypto";
-import { Prisma } from "../../../../generated/prisma/client";
+import httpStatus from "http-status";
 import { Role, UserStatus } from "../../../../generated/prisma/enums";
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
-import logger from "../../logger";
 import { AppError } from "../../utils/AppError";
-import { parseDuration } from "../../utils/duration";
 import {
 	sendPasswordChangedEmail,
 	sendPasswordResetOtpEmail,
 	sendRegistrationOtpEmail,
 	sendWelcomeEmail,
 } from "../../utils/email";
-import {
-	createSessionId,
-	hashToken,
-	signAccessToken,
-	signRefreshToken,
-	verifyRefreshToken,
-} from "../../utils/jwt";
-import {
-	DUMMY_PASSWORD_HASH,
-	hashPassword,
-	verifyPassword,
-} from "../../utils/password";
+import { jwtUtils } from "../../utils/jwt";
+import { hashPassword, verifyPassword } from "../../utils/password";
 import type {
-	AuthResult,
-	IClientMeta,
-	IChangePasswordPayload,
 	IForgotPasswordPayload,
 	ILoginPayload,
 	IRegisterPayload,
 	IResendRegistrationOtpPayload,
 	IResetPasswordPayload,
 	IVerifyEmailPayload,
-	PasswordOtpResult,
-	PublicUser,
-	RegistrationOtpResult,
 } from "./auth.interface";
 
-const OTP_LENGTH = 6;
-const DEFAULT_OTP_EXPIRES_IN_SECONDS = 2 * 60;
-const DEFAULT_REGISTRATION_SESSION_SECONDS = 5 * 60;
-
-const publicUserSelect = {
-	id: true,
-	name: true,
-	email: true,
-	imageUrl: true,
-	role: true,
-	status: true,
-	emailVerified: true,
-	createdAt: true,
-	lastLoginAt: true,
-} as const;
-
-type SessionUser = Pick<PublicUser, "id" | "name" | "email" | "role"> & {
-	tokenVersion: number;
-};
+const OTP_EXPIRATION_IN_SECONDS =
+	Number(config.otp_expires_in_seconds) || 2 * 60;
+const REGISTRATION_SESSION_EXPIRATION_IN_SECONDS =
+	Number(config.registration_session_expires_in_seconds) || 5 * 60;
 
 type PendingRegistration = {
 	name: string;
@@ -66,562 +33,281 @@ type PendingRegistration = {
 	passwordHash: string;
 };
 
-const registrationDataKey = (email: string) =>
-	`auth:registration:data:${email}`;
-const registrationOtpKey = (email: string) => `auth:registration:otp:${email}`;
-const forgotPasswordOtpKey = (email: string) =>
-	`auth:forgot-password:otp:${email}`;
-
-const readPositiveInt = (value: string | undefined, fallback: number) => {
-	const parsed = Number(value);
-	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+type TokenUser = {
+	id: string;
+	name: string;
+	email: string;
+	role: Role;
+	tokenVersion: number;
 };
 
-const otpExpiresInSeconds = () =>
-	readPositiveInt(
-		config.otp_expires_in_seconds,
-		DEFAULT_OTP_EXPIRES_IN_SECONDS,
-	);
-
-const registrationSessionSeconds = () =>
-	readPositiveInt(
-		config.registration_session_expires_in_seconds,
-		DEFAULT_REGISTRATION_SESSION_SECONDS,
-	);
-
-const expiryIso = (seconds: number) =>
-	new Date(Date.now() + seconds * 1000).toISOString();
-
-const generateOtp = () =>
-	randomInt(10 ** (OTP_LENGTH - 1), 10 ** OTP_LENGTH).toString();
-
-const toPublicUser = (user: PublicUser): PublicUser => ({
-	id: user.id,
-	name: user.name,
-	email: user.email,
-	imageUrl: user.imageUrl,
-	role: user.role,
-	status: user.status,
-	emailVerified: user.emailVerified,
-	createdAt: user.createdAt,
-	lastLoginAt: user.lastLoginAt,
-});
-
-const parsePendingRegistration = (raw: string | null): PendingRegistration => {
-	if (!raw) {
-		throw AppError.badRequest(
-			"Your registration session has expired. Please register again.",
-		);
-	}
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		throw AppError.badRequest(
-			"Your registration session is invalid. Please register again.",
-		);
-	}
-
-	if (parsed === null || typeof parsed !== "object") {
-		throw AppError.badRequest(
-			"Your registration session is invalid. Please register again.",
-		);
-	}
-
-	const record = parsed as Record<string, unknown>;
-	const { name, email, passwordHash } = record;
-
-	if (
-		typeof name !== "string" ||
-		typeof email !== "string" ||
-		typeof passwordHash !== "string"
-	) {
-		throw AppError.badRequest(
-			"Your registration session is invalid. Please register again.",
-		);
-	}
-
-	return { name, email, passwordHash };
-};
-
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
-const isUniqueViolation = (error: unknown) =>
-	error instanceof Prisma.PrismaClientKnownRequestError &&
-	error.code === "P2002";
-
-const buildSessionTokens = (user: SessionUser) => {
-	const accessToken = signAccessToken({
-		sub: user.id,
-		email: user.email,
+const createTokens = (user: TokenUser) => {
+	const payload = {
+		userId: user.id,
 		name: user.name,
+		email: user.email,
 		role: user.role,
 		tv: user.tokenVersion,
-		type: "access",
-	});
-
-	const refreshToken = signRefreshToken({
-		sub: user.id,
-		jti: createSessionId(),
-		tv: user.tokenVersion,
-		type: "refresh",
-	});
-
-	const expiresAt = new Date(
-		Date.now() + parseDuration(config.jwt_refresh_expires_in),
-	);
+	};
 
 	return {
-		accessToken,
-		refreshToken,
-		tokenHash: hashToken(refreshToken),
-		expiresAt,
+		accessToken: jwtUtils.createToken(
+			payload,
+			config.jwt_access_secret,
+			config.jwt_access_expires_in,
+		),
+		refreshToken: jwtUtils.createToken(
+			payload,
+			config.jwt_refresh_secret,
+			config.jwt_refresh_expires_in,
+		),
 	};
 };
 
-const issueSession = async (
-	user: SessionUser,
-	meta: IClientMeta,
-	tx?: Prisma.TransactionClient,
-) => {
-	const db = tx ?? prisma;
-	const tokens = buildSessionTokens(user);
-
-	await db.session.create({
-		data: {
-			userId: user.id,
-			tokenHash: tokens.tokenHash,
-			userAgent: meta.userAgent ?? null,
-			ipAddress: meta.ipAddress ?? null,
-			expiresAt: tokens.expiresAt,
-		},
-	});
-
-	return {
-		accessToken: tokens.accessToken,
-		refreshToken: tokens.refreshToken,
-	};
-};
-
-const register = async (
-	payload: IRegisterPayload,
-): Promise<RegistrationOtpResult> => {
-	const email = normalizeEmail(payload.email);
+const register = async (payload: IRegisterPayload) => {
 	const name = payload.name.trim();
+	const email = payload.email.trim().toLowerCase();
 
-	const existing = await prisma.user.findUnique({
-		where: { email },
-		select: { id: true },
-	});
+	const isUserExists = await prisma.user.findUnique({ where: { email } });
 
-	if (existing) {
-		throw AppError.conflict("An account with this email already exists.");
+	if (isUserExists) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"User with this email already exists.",
+		);
 	}
 
-	const otpSeconds = otpExpiresInSeconds();
-	const sessionSeconds = registrationSessionSeconds();
-	const otp = generateOtp();
 	const passwordHash = await hashPassword(payload.password);
+	const otp = randomInt(100000, 1000000).toString();
 
-	const otpKey = registrationOtpKey(email);
-	const dataKey = registrationDataKey(email);
+	const otpKey = `registration-otp:${email}`;
+	const registrationKey = `registration-data:${email}`;
 
 	await redisClient.set(otpKey, otp, {
-		expiration: { type: "EX", value: otpSeconds },
+		expiration: { type: "EX", value: OTP_EXPIRATION_IN_SECONDS },
 	});
 
 	await redisClient.set(
-		dataKey,
+		registrationKey,
 		JSON.stringify({ name, email, passwordHash }),
-		{ expiration: { type: "EX", value: sessionSeconds } },
+		{
+			expiration: {
+				type: "EX",
+				value: REGISTRATION_SESSION_EXPIRATION_IN_SECONDS,
+			},
+		},
 	);
 
-	try {
-		await sendRegistrationOtpEmail({
-			to: email,
-			name,
-			otp,
-			expiresInMinutes: Math.max(1, Math.ceil(otpSeconds / 60)),
-		});
-	} catch (error) {
-		await redisClient.del([otpKey, dataKey]);
-		throw error;
-	}
+	await sendRegistrationOtpEmail({
+		to: email,
+		name,
+		otp,
+		expiresInMinutes: OTP_EXPIRATION_IN_SECONDS / 60,
+	});
 
 	return {
-		expiresIn: otpSeconds,
-		expiresAt: expiryIso(otpSeconds),
-		sessionExpiresIn: sessionSeconds,
+		expiresIn: OTP_EXPIRATION_IN_SECONDS,
+		expiresAt: new Date(
+			Date.now() + OTP_EXPIRATION_IN_SECONDS * 1000,
+		).toISOString(),
+		sessionExpiresIn: REGISTRATION_SESSION_EXPIRATION_IN_SECONDS,
 	};
 };
 
 const resendRegistrationOtp = async (
 	payload: IResendRegistrationOtpPayload,
-): Promise<RegistrationOtpResult> => {
-	const email = normalizeEmail(payload.email);
+) => {
+	const email = payload.email.trim().toLowerCase();
 
-	const existing = await prisma.user.findUnique({
-		where: { email },
-		select: { id: true },
-	});
+	const isUserExists = await prisma.user.findUnique({ where: { email } });
 
-	if (existing) {
-		throw AppError.conflict("An account with this email already exists.");
+	if (isUserExists) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"User with this email already exists.",
+		);
 	}
 
-	const dataKey = registrationDataKey(email);
-	const otpKey = registrationOtpKey(email);
-	const pending = parsePendingRegistration(await redisClient.get(dataKey));
+	const registrationKey = `registration-data:${email}`;
+	const redisUserData = await redisClient.get(registrationKey);
 
-	const otpSeconds = otpExpiresInSeconds();
-	const sessionSeconds = registrationSessionSeconds();
-	const otp = generateOtp();
+	if (!redisUserData) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Registration session has expired. Please register again.",
+		);
+	}
+
+	const userData = JSON.parse(redisUserData) as PendingRegistration;
+	const otp = randomInt(100000, 1000000).toString();
+	const otpKey = `registration-otp:${email}`;
 
 	await redisClient.set(otpKey, otp, {
-		expiration: { type: "EX", value: otpSeconds },
+		expiration: { type: "EX", value: OTP_EXPIRATION_IN_SECONDS },
 	});
-	await redisClient.expire(dataKey, sessionSeconds);
 
-	try {
-		await sendRegistrationOtpEmail({
-			to: pending.email,
-			name: pending.name,
-			otp,
-			expiresInMinutes: Math.max(1, Math.ceil(otpSeconds / 60)),
-		});
-	} catch (error) {
-		await redisClient.del(otpKey);
-		throw error;
-	}
+	await redisClient.expire(
+		registrationKey,
+		REGISTRATION_SESSION_EXPIRATION_IN_SECONDS,
+	);
+
+	await sendRegistrationOtpEmail({
+		to: userData.email,
+		name: userData.name,
+		otp,
+		expiresInMinutes: OTP_EXPIRATION_IN_SECONDS / 60,
+	});
 
 	return {
-		expiresIn: otpSeconds,
-		expiresAt: expiryIso(otpSeconds),
-		sessionExpiresIn: sessionSeconds,
+		expiresIn: OTP_EXPIRATION_IN_SECONDS,
+		expiresAt: new Date(
+			Date.now() + OTP_EXPIRATION_IN_SECONDS * 1000,
+		).toISOString(),
+		sessionExpiresIn: REGISTRATION_SESSION_EXPIRATION_IN_SECONDS,
 	};
 };
 
-const verifyEmail = async (
-	payload: IVerifyEmailPayload,
-	meta: IClientMeta,
-): Promise<AuthResult> => {
-	const email = normalizeEmail(payload.email);
+const verifyEmail = async (payload: IVerifyEmailPayload) => {
+	const email = payload.email.trim().toLowerCase();
+	const otp = payload.otp.trim();
 
-	const existing = await prisma.user.findUnique({
-		where: { email },
-		select: { id: true, emailVerified: true },
+	const isUserExists = await prisma.user.findUnique({ where: { email } });
+
+	if (isUserExists?.emailVerified) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Email is already verified.");
+	}
+
+	if (isUserExists) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"User with this email already exists.",
+		);
+	}
+
+	const otpKey = `registration-otp:${email}`;
+	const redisOtp = await redisClient.get(otpKey);
+
+	if (!redisOtp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
+	}
+
+	if (redisOtp !== otp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP is not valid.");
+	}
+
+	await redisClient.del(otpKey);
+
+	const registrationKey = `registration-data:${email}`;
+	const redisUserData = await redisClient.get(registrationKey);
+
+	if (!redisUserData) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Registration data is missing.");
+	}
+
+	const userData = JSON.parse(redisUserData) as PendingRegistration;
+
+	const user = await prisma.user.create({
+		data: {
+			name: userData.name,
+			email: userData.email,
+			passwordHash: userData.passwordHash,
+			role: Role.USER,
+			emailVerified: true,
+			emailVerifiedAt: new Date(),
+		},
+		omit: { passwordHash: true },
 	});
 
-	if (existing?.emailVerified) {
-		throw AppError.badRequest(
-			"This email address is already verified. Please log in.",
-		);
-	}
+	await redisClient.del(registrationKey);
 
-	if (existing) {
-		throw AppError.conflict("An account with this email already exists.");
-	}
+	await sendWelcomeEmail({ to: user.email, name: user.name });
 
-	const otpKey = registrationOtpKey(email);
-	const dataKey = registrationDataKey(email);
-
-	const storedOtp = await redisClient.get(otpKey);
-
-	if (!storedOtp) {
-		throw AppError.badRequest(
-			"The verification code has expired. Please request a new one.",
-		);
-	}
-
-	if (storedOtp !== payload.otp) {
-		throw AppError.badRequest("The verification code is incorrect.");
-	}
-
-	const pending = parsePendingRegistration(await redisClient.get(dataKey));
-
-	try {
-		const result = await prisma.$transaction(async (tx) => {
-			const created = await tx.user.create({
-				data: {
-					name: pending.name,
-					email,
-					passwordHash: pending.passwordHash,
-					role: Role.USER,
-					emailVerified: true,
-					emailVerifiedAt: new Date(),
-				},
-				select: {
-					...publicUserSelect,
-					tokenVersion: true,
-				},
-			});
-
-			const tokens = await issueSession(
-				{
-					id: created.id,
-					name: created.name,
-					email: created.email,
-					role: created.role,
-					tokenVersion: created.tokenVersion,
-				},
-				meta,
-				tx,
-			);
-
-			return { user: toPublicUser(created), ...tokens };
-		});
-
-		await redisClient.del([otpKey, dataKey]);
-
-		void sendWelcomeEmail({
-			to: result.user.email,
-			name: result.user.name,
-		}).catch((error: unknown) => {
-			logger.warn("Could not send the welcome email.", { error });
-		});
-
-		return result;
-	} catch (error) {
-		if (isUniqueViolation(error)) {
-			throw AppError.conflict("An account with this email already exists.");
-		}
-
-		throw error;
-	}
+	return {
+		user,
+		...createTokens(user),
+	};
 };
 
-const login = async (
-	payload: ILoginPayload,
-	meta: IClientMeta,
-): Promise<AuthResult> => {
-	const email = normalizeEmail(payload.email);
+const login = async (payload: ILoginPayload) => {
+	const email = payload.email.trim().toLowerCase();
+	const user = await prisma.user.findUnique({ where: { email } });
 
-	const user = await prisma.user.findUnique({
-		where: { email },
-		select: {
-			...publicUserSelect,
-			passwordHash: true,
-			tokenVersion: true,
-			isDeleted: true,
-		},
-	});
-
-	const passwordHash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
-	const passwordMatches = await verifyPassword(payload.password, passwordHash);
-
-	if (!user || !passwordMatches) {
-		throw AppError.unauthorized("Invalid email or password.");
+	if (!user) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password.");
 	}
 
 	if (user.isDeleted || user.status === UserStatus.DELETED) {
-		throw AppError.forbidden("This account is no longer available.");
+		throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
 	}
 
 	if (user.status === UserStatus.BLOCKED) {
-		throw AppError.forbidden(
-			"Your account has been blocked. Please contact an administrator.",
-		);
+		throw new AppError(httpStatus.FORBIDDEN, "User is blocked.");
 	}
 
 	if (!user.emailVerified) {
-		throw AppError.forbidden(
+		throw new AppError(
+			httpStatus.FORBIDDEN,
 			"Please verify your email address before logging in.",
 		);
 	}
 
-	const updated = await prisma.user.update({
-		where: { id: user.id },
-		data: { lastLoginAt: new Date() },
-		select: {
-			...publicUserSelect,
-			tokenVersion: true,
-		},
-	});
-
-	const tokens = await issueSession(
-		{
-			id: updated.id,
-			name: updated.name,
-			email: updated.email,
-			role: updated.role,
-			tokenVersion: updated.tokenVersion,
-		},
-		meta,
+	const isPasswordMatched = await verifyPassword(
+		payload.password,
+		user.passwordHash,
 	);
 
-	return { user: toPublicUser(updated), ...tokens };
+	if (!isPasswordMatched) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password.");
+	}
+
+	return createTokens(user);
 };
 
-const getMe = async (userId: string): Promise<PublicUser> => {
+const getMe = async (userId: string) => {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: {
-			...publicUserSelect,
-			isDeleted: true,
-		},
+		omit: { passwordHash: true },
 	});
 
 	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
-		throw AppError.unauthorized("This account is no longer available.");
+		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
-	return toPublicUser(user);
+	return user;
 };
 
-const refresh = async (
-	token: string | null,
-	meta: IClientMeta,
-): Promise<AuthResult> => {
+const refresh = async (token: string | null) => {
 	if (!token) {
-		throw AppError.unauthorized(
-			"Your session has expired. Please log in again.",
+		throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is missing.");
+	}
+
+	const verified = jwtUtils.verifyToken(token, config.jwt_refresh_secret);
+
+	if (!verified.success || !verified.data) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Invalid or expired refresh token.",
 		);
 	}
 
-	const verified = verifyRefreshToken(token);
-
-	if (!verified.ok) {
-		throw AppError.unauthorized(
-			verified.reason === "Token has expired"
-				? "Your session has expired. Please log in again."
-				: "Your session is no longer valid. Please log in again.",
-		);
-	}
-
-	const { sub, tv } = verified.payload;
-	const tokenHash = hashToken(token);
-
-	const session = await prisma.session.findUnique({
-		where: { tokenHash },
-		select: {
-			id: true,
-			userId: true,
-			revokedAt: true,
-			expiresAt: true,
-		},
-	});
-
-	if (!session || session.userId !== sub) {
-		throw AppError.unauthorized(
-			"Your session is no longer valid. Please log in again.",
-		);
-	}
-
-	if (session.revokedAt) {
-		await prisma.session.updateMany({
-			where: { userId: sub, revokedAt: null },
-			data: {
-				revokedAt: new Date(),
-				revokedReason: "refresh_token_reuse",
-			},
-		});
-
-		throw AppError.unauthorized(
-			"Your session is no longer valid. Please log in again.",
-		);
-	}
-
-	if (session.expiresAt.getTime() <= Date.now()) {
-		await prisma.session.update({
-			where: { id: session.id },
-			data: { revokedAt: new Date(), revokedReason: "expired" },
-		});
-
-		throw AppError.unauthorized(
-			"Your session has expired. Please log in again.",
-		);
-	}
-
+	const data = verified.data as { userId: string };
 	const user = await prisma.user.findUnique({
-		where: { id: sub },
-		select: {
-			...publicUserSelect,
-			tokenVersion: true,
-			isDeleted: true,
-		},
+		where: { id: data.userId },
 	});
 
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
-		throw AppError.unauthorized("This account is no longer available.");
-	}
-
-	if (user.status === UserStatus.BLOCKED) {
-		throw AppError.forbidden(
-			"Your account has been blocked. Please contact an administrator.",
+	if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"User is inactive or not found.",
 		);
 	}
 
-	if (!user.emailVerified) {
-		throw AppError.forbidden(
-			"Please verify your email address before continuing.",
-		);
-	}
-
-	if (user.tokenVersion !== tv) {
-		throw AppError.unauthorized(
-			"Your session is no longer valid. Please log in again.",
-		);
-	}
-
-	const tokens = await prisma.$transaction(async (tx) => {
-		const revoked = await tx.session.updateMany({
-			where: { id: session.id, revokedAt: null },
-			data: {
-				revokedAt: new Date(),
-				revokedReason: "rotated",
-				lastUsedAt: new Date(),
-			},
-		});
-
-		if (revoked.count === 0) {
-			throw AppError.unauthorized(
-				"Your session is no longer valid. Please log in again.",
-			);
-		}
-
-		return issueSession(
-			{
-				id: user.id,
-				name: user.name,
-				email: user.email,
-				role: user.role,
-				tokenVersion: user.tokenVersion,
-			},
-			meta,
-			tx,
-		);
-	});
-
-	return { user: toPublicUser(user), ...tokens };
+	return createTokens(user);
 };
 
-const logout = async (token: string | null): Promise<void> => {
-	if (!token) return;
-
-	await prisma.session.updateMany({
-		where: { tokenHash: hashToken(token), revokedAt: null },
-		data: { revokedAt: new Date(), revokedReason: "logout" },
-	});
-};
-
-const forgotPassword = async (
-	payload: IForgotPasswordPayload,
-): Promise<PasswordOtpResult> => {
-	const email = normalizeEmail(payload.email);
-	const otpSeconds = otpExpiresInSeconds();
-
-	const user = await prisma.user.findUnique({
-		where: { email },
-		select: {
-			id: true,
-			name: true,
-			email: true,
-			status: true,
-			isDeleted: true,
-			emailVerified: true,
-		},
-	});
+const forgotPassword = async (payload: IForgotPasswordPayload) => {
+	const email = payload.email.trim().toLowerCase();
+	const user = await prisma.user.findUnique({ where: { email } });
 
 	if (
 		user &&
@@ -629,208 +315,66 @@ const forgotPassword = async (
 		user.status === UserStatus.ACTIVE &&
 		user.emailVerified
 	) {
-		const otp = generateOtp();
-		const key = forgotPasswordOtpKey(email);
+		const otp = randomInt(100000, 1000000).toString();
+		const key = `forgot-password:${email}`;
 
 		await redisClient.set(key, otp, {
-			expiration: { type: "EX", value: otpSeconds },
+			expiration: { type: "EX", value: OTP_EXPIRATION_IN_SECONDS },
 		});
 
-		try {
-			await sendPasswordResetOtpEmail({
-				to: user.email,
-				name: user.name,
-				otp,
-				expiresInMinutes: Math.max(1, Math.ceil(otpSeconds / 60)),
-			});
-		} catch (error) {
-			await redisClient.del(key);
-			throw error;
-		}
+		await sendPasswordResetOtpEmail({
+			to: user.email,
+			name: user.name,
+			otp,
+			expiresInMinutes: OTP_EXPIRATION_IN_SECONDS / 60,
+		});
 	}
 
 	return {
-		expiresIn: otpSeconds,
-		expiresAt: expiryIso(otpSeconds),
+		expiresIn: OTP_EXPIRATION_IN_SECONDS,
+		expiresAt: new Date(
+			Date.now() + OTP_EXPIRATION_IN_SECONDS * 1000,
+		).toISOString(),
 	};
 };
 
-const resetPassword = async (payload: IResetPasswordPayload): Promise<void> => {
-	const email = normalizeEmail(payload.email);
-	const key = forgotPasswordOtpKey(email);
-	const storedOtp = await redisClient.get(key);
+const resetPassword = async (payload: IResetPasswordPayload) => {
+	const email = payload.email.trim().toLowerCase();
+	const otp = payload.otp.trim();
 
-	if (!storedOtp || storedOtp !== payload.otp) {
-		throw AppError.badRequest(
-			"The verification code is invalid or has expired.",
-		);
+	const key = `forgot-password:${email}`;
+	const redisOtp = await redisClient.get(key);
+
+	if (!redisOtp || redisOtp !== otp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
 	}
 
-	const user = await prisma.user.findUnique({
-		where: { email },
-		select: {
-			id: true,
-			name: true,
-			email: true,
-			status: true,
-			isDeleted: true,
-			emailVerified: true,
-		},
-	});
+	const user = await prisma.user.findUnique({ where: { email } });
 
-	if (
-		!user ||
-		user.isDeleted ||
-		user.status !== UserStatus.ACTIVE ||
-		!user.emailVerified
-	) {
-		throw AppError.badRequest(
-			"The verification code is invalid or has expired.",
-		);
+	if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
 	}
 
 	const passwordHash = await hashPassword(payload.newPassword);
 
-	await prisma.$transaction([
-		prisma.user.update({
-			where: { id: user.id },
-			data: {
-				passwordHash,
-				tokenVersion: { increment: 1 },
-			},
-		}),
-		prisma.session.updateMany({
-			where: { userId: user.id, revokedAt: null },
-			data: {
-				revokedAt: new Date(),
-				revokedReason: "password_reset",
-			},
-		}),
-	]);
+	await prisma.user.update({
+		where: { id: user.id },
+		data: { passwordHash },
+	});
 
 	await redisClient.del(key);
 
-	void sendPasswordChangedEmail({
-		to: user.email,
-		name: user.name,
-	}).catch((error: unknown) => {
-		logger.warn("Could not send the password changed email.", { error });
-	});
-};
-
-const changePassword = async (
-	userId: string,
-	payload: IChangePasswordPayload,
-	meta: IClientMeta,
-): Promise<AuthResult> => {
-	const user = await prisma.user.findUnique({
-		where: { id: userId },
-		select: {
-			id: true,
-			name: true,
-			email: true,
-			role: true,
-			status: true,
-			isDeleted: true,
-			emailVerified: true,
-			passwordHash: true,
-		},
-	});
-
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
-		throw AppError.unauthorized("This account is no longer available.");
-	}
-
-	if (user.status === UserStatus.BLOCKED) {
-		throw AppError.forbidden(
-			"Your account has been blocked. Please contact an administrator.",
-		);
-	}
-
-	if (!user.emailVerified) {
-		throw AppError.forbidden(
-			"Please verify your email address before continuing.",
-		);
-	}
-
-	const currentPasswordMatches = await verifyPassword(
-		payload.currentPassword,
-		user.passwordHash,
-	);
-
-	if (!currentPasswordMatches) {
-		throw AppError.badRequest("Your current password is incorrect.");
-	}
-
-	const matchesExistingPassword = await verifyPassword(
-		payload.newPassword,
-		user.passwordHash,
-	);
-
-	if (matchesExistingPassword) {
-		throw AppError.badRequest(
-			"New password must be different from the current password.",
-		);
-	}
-
-	const passwordHash = await hashPassword(payload.newPassword);
-
-	const result = await prisma.$transaction(async (tx) => {
-		const updated = await tx.user.update({
-			where: { id: user.id },
-			data: {
-				passwordHash,
-				tokenVersion: { increment: 1 },
-			},
-			select: {
-				...publicUserSelect,
-				tokenVersion: true,
-			},
-		});
-
-		await tx.session.updateMany({
-			where: { userId: user.id, revokedAt: null },
-			data: {
-				revokedAt: new Date(),
-				revokedReason: "password_change",
-			},
-		});
-
-		const tokens = await issueSession(
-			{
-				id: updated.id,
-				name: updated.name,
-				email: updated.email,
-				role: updated.role,
-				tokenVersion: updated.tokenVersion,
-			},
-			meta,
-			tx,
-		);
-
-		return { user: toPublicUser(updated), ...tokens };
-	});
-
-	void sendPasswordChangedEmail({
-		to: result.user.email,
-		name: result.user.name,
-	}).catch((error: unknown) => {
-		logger.warn("Could not send the password changed email.", { error });
-	});
-
-	return result;
+	await sendPasswordChangedEmail({ to: user.email, name: user.name });
 };
 
 export const AuthService = {
 	register,
-	verifyEmail,
 	resendRegistrationOtp,
+	verifyEmail,
 	login,
 	getMe,
 	refresh,
-	logout,
 	forgotPassword,
 	resendForgotPasswordOtp: forgotPassword,
 	resetPassword,
-	changePassword,
 };

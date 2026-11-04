@@ -5,9 +5,9 @@ import { transporter } from "./app/lib/nodemailer";
 import { prisma } from "./app/lib/prisma";
 import { redisClient } from "./app/lib/redis";
 import logger from "./app/logger";
-import { seedDatabase } from "./app/utils/seed";
+import { seedDatabase } from "../prisma/seed/seed";
 
-const PORT = Number(config.port) || 5001;
+const PORT = Number(config.port);
 
 const main = async () => {
 	try {
@@ -22,7 +22,7 @@ const main = async () => {
 
 		await seedDatabase();
 
-		deleteUnverifiedUsers();
+		await deleteUnverifiedUsers();
 
 		const server = app.listen(PORT, () => {
 			logger.info(`Server is running on port ${PORT}`);

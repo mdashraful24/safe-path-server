@@ -15,11 +15,6 @@ export type SeedAccount = {
 
 export type SeedAccountResult = "created" | "existing";
 
-export type SeedResult = {
-	created: SeedAccount[];
-	existing: SeedAccount[];
-};
-
 export type SeedIncident = {
 	title: string;
 	description: string;

@@ -25,11 +25,6 @@ const otpSchema = z
 	.trim()
 	.regex(/^\d{6}$/, "Verification code must be a 6-digit number.");
 
-const currentPasswordSchema = z
-	.string("Current password is required.")
-	.min(1, "Current password is required.")
-	.max(72, "Password must be at most 72 characters long.");
-
 export const authValidation = {
 	register: z.object({
 		name: z
@@ -67,14 +62,4 @@ export const authValidation = {
 		otp: otpSchema,
 		newPassword: passwordSchema,
 	}),
-
-	changePassword: z
-		.object({
-			currentPassword: currentPasswordSchema,
-			newPassword: passwordSchema,
-		})
-		.refine((data) => data.currentPassword !== data.newPassword, {
-			message: "New password must be different from the current password.",
-			path: ["newPassword"],
-		}),
 };

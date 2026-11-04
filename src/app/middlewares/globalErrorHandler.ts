@@ -116,7 +116,7 @@ export const globalErrorHandler: ErrorRequestHandler = (
 		success: false,
 		statusCode,
 		message:
-			isUnexpected && config.is_production
+			isUnexpected && config.node_env === "production"
 				? "Something went wrong. Please try again."
 				: message,
 	};

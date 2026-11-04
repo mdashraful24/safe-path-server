@@ -13,6 +13,8 @@ export type SeedAccount = {
 	imageUrl: string | null;
 };
 
+export type SeedAccountResult = "created" | "existing";
+
 export type SeedResult = {
 	created: SeedAccount[];
 	existing: SeedAccount[];

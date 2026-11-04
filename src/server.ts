@@ -1,106 +1,82 @@
-import { seedIncidents } from "../prisma/all-seeds/incidents.seed";
-import { seedUsers } from "../prisma/all-seeds/seed";
 import app from "./app";
-import config, { assertRuntimeConfig } from "./app/config";
-import { isCloudinaryConfigured } from "./app/lib/cloudinary";
-import { isEmailConfigured, transporter } from "./app/lib/nodemailer";
+import config from "./app/config";
+import { deleteUnverifiedUsers } from "./app/lib/cron";
+import { transporter } from "./app/lib/nodemailer";
 import { prisma } from "./app/lib/prisma";
-import { connectRedis } from "./app/lib/redis";
+import { redisClient } from "./app/lib/redis";
+import logger from "./app/logger";
+import { seedDatabase } from "./app/utils/seed";
 
-const start = async () => {
-	assertRuntimeConfig();
+const PORT = Number(config.port) || 5001;
 
-	await prisma.$connect();
-
+const main = async () => {
 	try {
-		await connectRedis();
-		console.log("Redis connected.");
-	} catch (error) {
-		console.warn(
-			"Redis is unavailable, so auth registration and OTP endpoints will return 503:",
-			error instanceof Error ? error.message : String(error),
-		);
-	}
+		await prisma.$connect();
+		logger.info("Connected to the database successfully.");
 
-	if (isEmailConfigured) {
-		try {
-			await transporter.verify();
-			console.log("SMTP connected.");
-		} catch (error) {
-			console.warn(
-				"SMTP verification failed:",
-				error instanceof Error ? error.message : String(error),
-			);
-		}
-	} else {
-		console.warn(
-			"SMTP is not configured. Registration OTPs will be printed to this console in development.",
-		);
-	}
+		await redisClient.connect();
+		logger.info("Redis Connected Successfully.");
 
-	if (!isCloudinaryConfigured) {
-		console.warn(
-			"Cloudinary is not configured. Incident image uploads will return 503.",
-		);
-	}
+		await transporter.verify();
+		logger.info("Nodemailer Connected Successfully.");
 
-	if (config.seed_on_start) {
-		const { created, existing } = await seedUsers();
-		const incidents = await seedIncidents();
+		await seedDatabase();
 
-		if (created.length > 0) {
-			console.log(`Seeded ${created.length} demo account(s):`);
-			for (const account of created) {
-				console.log(`  - ${account.role.padEnd(9)} ${account.email}`);
-			}
-		} else if (existing.length > 0) {
-			console.log(`Demo accounts already present (${existing.length}).`);
-		}
+		deleteUnverifiedUsers();
 
-		if (incidents.created > 0) {
-			console.log(`Seeded ${incidents.created} demo incident(s).`);
-		} else if (incidents.existing > 0) {
-			console.log(`Demo incidents already present (${incidents.existing}).`);
-		}
-	}
-
-	const server = app.listen(config.port, () => {
-		console.log(
-			`SafePath API listening on http://localhost:${config.port} (${config.node_env})`,
-		);
-		console.log("  health  GET /health");
-	});
-
-	let shuttingDown = false;
-
-	const shutdown = async (signal: string) => {
-		if (shuttingDown) return;
-		shuttingDown = true;
-
-		console.log(`\n${signal} received, shutting down gracefully...`);
-
-		const force = setTimeout(() => {
-			console.error("Shutdown timed out, forcing exit.");
-			process.exit(1);
-		}, 10_000);
-		force.unref();
-
-		server.close(async (error) => {
-			await prisma.$disconnect();
-			if (error) {
-				console.error("Error while closing the HTTP server:", error);
-				process.exit(1);
-			}
-			process.exit(0);
+		const server = app.listen(PORT, () => {
+			logger.info(`Server is running on port ${PORT}`);
 		});
-	};
 
-	process.on("SIGINT", () => void shutdown("SIGINT"));
-	process.on("SIGTERM", () => void shutdown("SIGTERM"));
+		let shuttingDown = false;
+
+		const shutdown = (signal: string) => {
+			if (shuttingDown) return;
+			shuttingDown = true;
+
+			logger.info(`${signal} received. Shutting down gracefully...`);
+
+			const force = setTimeout(() => {
+				logger.error("Forced shutdown after timeout.");
+				process.exit(1);
+			}, 10_000);
+			force.unref();
+
+			server.close(async (error) => {
+				try {
+					await prisma.$disconnect();
+					await redisClient.disconnect();
+
+					if (error) {
+						logger.error("Error while closing the HTTP server:", error);
+						process.exit(1);
+					}
+
+					logger.info("Database and Redis disconnected. Exiting.");
+					process.exit(0);
+				} catch (shutdownError) {
+					logger.error("Error during graceful shutdown:", shutdownError);
+					process.exit(1);
+				}
+			});
+		};
+
+		process.on("SIGINT", () => shutdown("SIGINT"));
+		process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+		process.on("unhandledRejection", (reason) => {
+			logger.error("Unhandled Rejection:", reason);
+		});
+
+		process.on("uncaughtException", (error) => {
+			logger.error("Uncaught Exception:", error);
+			process.exit(1);
+		});
+	} catch (error) {
+		logger.error("Error starting the server:", error);
+		await prisma.$disconnect();
+		process.exit(1);
+	}
 };
 
-start().catch(async (error) => {
-	console.error("Failed to start the SafePath API:", error);
-	await prisma.$disconnect().catch(() => undefined);
-	process.exit(1);
-});
+main();

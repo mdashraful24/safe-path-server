@@ -7,10 +7,10 @@ export const REFRESH_TOKEN_COOKIE = "sp_refresh_token";
 
 export const authCookieOptions = (): CookieOptions => ({
 	httpOnly: true,
-	secure: config.cookie_secure,
-	sameSite: config.cookie_same_site,
+	secure: config.cookie_secure === "true",
+	sameSite: config.cookie_same_site as CookieOptions["sameSite"],
 	path: "/",
-	domain: config.cookie_domain,
+	domain: process.env.COOKIE_DOMAIN || undefined,
 });
 
 export const setAuthCookies = (

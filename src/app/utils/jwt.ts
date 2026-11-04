@@ -23,10 +23,13 @@ export type RefreshTokenPayload = {
 
 type VerifyResult<T> = { ok: true; payload: T } | { ok: false; reason: string };
 
+const issuer = process.env.JWT_ISSUER || "safepath-api";
+const audience = process.env.JWT_AUDIENCE || "safepath-web";
+
 const commonOptions: SignOptions = {
 	algorithm: "HS256",
-	issuer: config.jwt_issuer,
-	audience: config.jwt_audience,
+	issuer,
+	audience,
 };
 
 export const signAccessToken = (payload: AccessTokenPayload): string => {
@@ -54,8 +57,8 @@ const verify = <T extends { type: string }>(
 	try {
 		const decoded = jwt.verify(token, secret, {
 			algorithms: ["HS256"],
-			issuer: config.jwt_issuer,
-			audience: config.jwt_audience,
+			issuer,
+			audience,
 		});
 
 		if (typeof decoded === "string") {

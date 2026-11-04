@@ -11,7 +11,7 @@ export const hashPassword = async (password: string): Promise<string> => {
 	if (!passwordFitsBcrypt(password)) {
 		throw new Error("Password exceeds the bcrypt 72-byte limit.");
 	}
-	return bcrypt.hash(password, config.bcrypt_salt_rounds);
+	return bcrypt.hash(password, Number(config.bcrypt_salt_rounds));
 };
 
 export const verifyPassword = async (

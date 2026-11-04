@@ -12,8 +12,10 @@ import {
 
 const app = express();
 
-if (config.trust_proxy > 0) {
-	app.set("trust proxy", config.trust_proxy);
+const trustProxy = Number(config.trust_proxy);
+
+if (Number.isFinite(trustProxy) && trustProxy > 0) {
+	app.set("trust proxy", trustProxy);
 }
 
 app.disable("x-powered-by");

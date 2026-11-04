@@ -19,7 +19,7 @@ export const sendRegistrationOtpEmail = async ({
 	}
 
 	if (!isEmailConfigured) {
-		if (config.is_production) {
+		if (config.node_env === "production") {
 			throw new Error("SMTP is not configured, cannot send the OTP email.");
 		}
 

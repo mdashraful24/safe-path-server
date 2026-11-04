@@ -9,8 +9,17 @@ import {
 	globalErrorHandler,
 	notFound,
 } from "./app/middlewares/globalErrorHandler";
+import { AuthRoutes } from "./app/modules/auth/auth.route";
 
 const app = express();
+
+const apiPrefix = (() => {
+	const raw = (config.api_prefix || "/api/v1").trim();
+
+	if (!raw || raw === "/") return "";
+
+	return `/${raw.replace(/^\/+|\/+$/g, "")}`;
+})();
 
 const trustProxy = Number(config.trust_proxy);
 
@@ -43,6 +52,8 @@ app.get("/health", (_req, res) => {
 		data: { uptime: Math.round(process.uptime()) },
 	});
 });
+
+app.use(`${apiPrefix}/auth`, AuthRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);

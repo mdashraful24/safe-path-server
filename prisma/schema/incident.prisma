@@ -1,0 +1,40 @@
+model Incident {
+  id String @id @default(uuid())
+
+  title       String
+  description String
+  category    IncidentCategory
+  status      IncidentStatus   @default(PENDING)
+
+  area      String
+  location  String?
+  latitude  Float?
+  longitude Float?
+
+  incidentDate DateTime
+
+  imageUrl      String?
+  imagePublicId String?
+
+  reporterId String
+  reporter   User   @relation("ReportedIncidents", fields: [reporterId], references: [id], onDelete: Restrict)
+
+  reviewedById String?
+  reviewedBy   User?   @relation("ReviewedIncidents", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote   String?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  history IncidentHistory[]
+
+  @@index([status])
+  @@index([category])
+  @@index([area])
+  @@index([reporterId])
+  @@index([reviewedById])
+  @@index([incidentDate])
+  @@index([createdAt])
+  @@map("incidents")
+}

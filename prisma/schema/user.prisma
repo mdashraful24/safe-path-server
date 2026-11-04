@@ -1,0 +1,37 @@
+model User {
+  id String @id @default(uuid())
+
+  name  String
+  email String @unique
+
+  passwordHash String
+
+  imageUrl      String?
+  imagePublicId String?
+
+  role   Role       @default(USER)
+  status UserStatus @default(ACTIVE)
+
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
+  tokenVersion Int @default(0)
+
+  lastLoginAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+
+  reportedIncidents Incident[]        @relation("ReportedIncidents")
+  reviewedIncidents Incident[]        @relation("ReviewedIncidents")
+  incidentChanges   IncidentHistory[] @relation("IncidentChanges")
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}

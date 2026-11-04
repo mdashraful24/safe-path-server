@@ -1,0 +1,24 @@
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+enum IncidentCategory {
+  HARASSMENT
+  THEFT
+  SUSPICIOUS_ACTIVITY
+  UNSAFE_AREA
+  OTHER
+}
+
+enum IncidentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

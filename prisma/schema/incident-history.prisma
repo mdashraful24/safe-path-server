@@ -1,0 +1,19 @@
+model IncidentHistory {
+  id String @id @default(uuid())
+
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  changedById String
+  changedBy   User   @relation("IncidentChanges", fields: [changedById], references: [id], onDelete: Restrict)
+
+  previousStatus IncidentStatus?
+  newStatus      IncidentStatus
+
+  note String?
+
+  createdAt DateTime @default(now())
+
+  @@index([incidentId, createdAt])
+  @@map("incident_history")
+}

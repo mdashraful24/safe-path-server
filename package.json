@@ -13,7 +13,7 @@
 		"db:generate": "bun --bun run prisma generate",
 		"db:migrate": "bun --bun run prisma migrate dev",
 		"db:studio": "bun --bun run prisma studio",
-		"db:seed": "bun prisma/seed/seed.ts",
+		"db:seed": "bun prisma/seed/run.ts",
 		"format:check": "bunx @biomejs/biome format ./src",
 		"format:fix": "bunx @biomejs/biome format --write ./src",
 		"lint:check": "bunx @biomejs/biome lint ./src",

@@ -36,7 +36,7 @@ const optionalPositiveInt = (max?: number) =>
 			.optional(),
 	);
 
-const createSchema = z
+const incidentFieldsSchema = z
 	.object({
 		title: z
 			.string("Title must be a string.")
@@ -64,19 +64,29 @@ const createSchema = z
 				"Incident date cannot be in the future.",
 			),
 	})
-	.strict()
-	.superRefine((data, ctx) => {
-		const hasLatitude = data.latitude !== undefined;
-		const hasLongitude = data.longitude !== undefined;
+	.strict();
 
-		if (hasLatitude !== hasLongitude) {
-			ctx.addIssue({
-				code: "custom",
-				path: [hasLatitude ? "longitude" : "latitude"],
-				message: "Latitude and longitude must be provided together.",
-			});
-		}
-	});
+const validateCoordinates = (
+	data: { latitude?: number; longitude?: number },
+	ctx: z.RefinementCtx,
+) => {
+	const hasLatitude = data.latitude !== undefined;
+	const hasLongitude = data.longitude !== undefined;
+
+	if (hasLatitude !== hasLongitude) {
+		ctx.addIssue({
+			code: "custom",
+			path: [hasLatitude ? "longitude" : "latitude"],
+			message: "Latitude and longitude must be provided together.",
+		});
+	}
+};
+
+const createSchema = incidentFieldsSchema.superRefine(validateCoordinates);
+
+const updateSchema = incidentFieldsSchema
+	.partial()
+	.superRefine(validateCoordinates);
 
 const reviewSchema = z
 	.object({
@@ -110,6 +120,7 @@ const listQuerySchema = z
 
 export const incidentValidation = {
 	create: createSchema,
+	update: updateSchema,
 	review: reviewSchema,
 	listQuery: listQuerySchema,
 };

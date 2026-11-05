@@ -14,6 +14,17 @@ export interface ICreateIncidentPayload {
 	incidentDate: Date;
 }
 
+export interface IUpdateIncidentPayload {
+	title?: string;
+	description?: string;
+	category?: IncidentCategory;
+	area?: string;
+	location?: string;
+	latitude?: number;
+	longitude?: number;
+	incidentDate?: Date;
+}
+
 export interface IReviewIncidentPayload {
 	status: "APPROVED" | "REJECTED";
 	note?: string;

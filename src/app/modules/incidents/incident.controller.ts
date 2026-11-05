@@ -5,6 +5,7 @@ import { sendResponse } from "../../utils/sendResponse";
 import type {
 	ICreateIncidentPayload,
 	IReviewIncidentPayload,
+	IUpdateIncidentPayload,
 } from "./incident.interface";
 import { IncidentService } from "./incident.service";
 import { parseIncidentListQuery } from "./incident.validation";
@@ -80,6 +81,36 @@ const getMyIncident = catchAsync(async (req, res) => {
 	});
 });
 
+const updateMyIncident = catchAsync(async (req, res) => {
+	const incident = await IncidentService.updateMyIncident(
+		currentUser(req).id,
+		String(req.params.incidentId),
+		req.body as IUpdateIncidentPayload,
+		req.file,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Incident updated successfully.",
+		data: incident,
+	});
+});
+
+const deleteMyIncident = catchAsync(async (req, res) => {
+	await IncidentService.deleteMyIncident(
+		currentUser(req).id,
+		String(req.params.incidentId),
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Incident deleted successfully.",
+		data: null,
+	});
+});
+
 const listIncidentsForAdmin = catchAsync(async (req, res) => {
 	const result = await IncidentService.listIncidentsForAdmin(
 		parseIncidentListQuery(req.query),
@@ -128,6 +159,8 @@ export const IncidentController = {
 	getPublicIncident,
 	listMyIncidents,
 	getMyIncident,
+	updateMyIncident,
+	deleteMyIncident,
 	listIncidentsForAdmin,
 	getIncidentForAdmin,
 	reviewIncident,

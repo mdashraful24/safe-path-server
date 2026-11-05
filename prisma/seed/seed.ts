@@ -183,8 +183,3 @@ export const seedDatabase = async (): Promise<void> => {
 	await seedDemoUser();
 	await seedDemoIncidents();
 };
-
-if (import.meta.main) {
-	await seedDatabase();
-	await prisma.$disconnect();
-}

@@ -17,6 +17,18 @@ router.post(
 router.get("/", IncidentController.listPublicIncidents);
 router.get("/me", requireAuth, IncidentController.listMyIncidents);
 router.get("/me/:incidentId", requireAuth, IncidentController.getMyIncident);
+router.patch(
+	"/me/:incidentId",
+	requireAuth,
+	upload.single("image"),
+	validateRequest(incidentValidation.update),
+	IncidentController.updateMyIncident,
+);
+router.delete(
+	"/me/:incidentId",
+	requireAuth,
+	IncidentController.deleteMyIncident,
+);
 router.get("/:incidentId", IncidentController.getPublicIncident);
 
 export const IncidentRoutes = router;

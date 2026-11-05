@@ -13,6 +13,7 @@ import type {
 	IIncidentListQuery,
 	IncidentSortField,
 	IReviewIncidentPayload,
+	IUpdateIncidentPayload,
 } from "./incident.interface";
 
 const publicIncidentSelect = {
@@ -208,6 +209,36 @@ const getMyIncident = async (reporterId: string, incidentId: string) => {
 	return incident;
 };
 
+const getPendingOwnIncident = async (
+	reporterId: string,
+	incidentId: string,
+) => {
+	const incident = await prisma.incident.findFirst({
+		where: {
+			id: incidentId,
+			reporterId,
+		},
+		select: {
+			id: true,
+			status: true,
+			imagePublicId: true,
+		},
+	});
+
+	if (!incident) {
+		throw new AppError(httpStatus.NOT_FOUND, "Incident not found.");
+	}
+
+	if (incident.status !== IncidentStatus.PENDING) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"Only pending incidents can be changed.",
+		);
+	}
+
+	return incident;
+};
+
 const createIncident = async (
 	reporterId: string,
 	payload: ICreateIncidentPayload,
@@ -249,6 +280,67 @@ const createIncident = async (
 		}
 
 		throw error;
+	}
+};
+
+const updateMyIncident = async (
+	reporterId: string,
+	incidentId: string,
+	payload: IUpdateIncidentPayload,
+	file?: Express.Multer.File,
+) => {
+	const existingIncident = await getPendingOwnIncident(reporterId, incidentId);
+
+	if (Object.keys(payload).length === 0 && !file) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"At least one incident field or image is required.",
+		);
+	}
+
+	const uploadedImage = file ? await uploadIncidentImage(file) : null;
+
+	try {
+		const incident = await prisma.incident.update({
+			where: { id: incidentId },
+			data: {
+				...payload,
+				location: payload.location ?? undefined,
+				latitude: payload.latitude ?? undefined,
+				longitude: payload.longitude ?? undefined,
+				...(uploadedImage
+					? {
+							imageUrl: uploadedImage.imageUrl,
+							imagePublicId: uploadedImage.imagePublicId,
+						}
+					: {}),
+			},
+			select: ownIncidentSelect,
+		});
+
+		if (uploadedImage && existingIncident.imagePublicId) {
+			await deleteCloudinaryImage(existingIncident.imagePublicId);
+		}
+
+		return incident;
+	} catch (error) {
+		if (uploadedImage) {
+			await deleteCloudinaryImage(uploadedImage.imagePublicId);
+		}
+
+		throw error;
+	}
+};
+
+const deleteMyIncident = async (reporterId: string, incidentId: string) => {
+	const existingIncident = await getPendingOwnIncident(reporterId, incidentId);
+
+	await prisma.incident.delete({
+		where: { id: existingIncident.id },
+	});
+
+	if (existingIncident.imagePublicId) {
+		await deleteCloudinaryImage(existingIncident.imagePublicId);
 	}
 };
 
@@ -346,6 +438,8 @@ export const IncidentService = {
 	listMyIncidents,
 	getMyIncident,
 	createIncident,
+	updateMyIncident,
+	deleteMyIncident,
 	listIncidentsForAdmin,
 	getIncidentForAdmin,
 	reviewIncident,

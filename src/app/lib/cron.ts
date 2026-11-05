@@ -3,7 +3,7 @@ import { Role } from "../../../generated/prisma/enums";
 import { prisma } from "./prisma";
 
 export const deleteUnverifiedUsers = async () => {
-	cron.schedule("*/10 * * * *", async () => {
+	cron.schedule("*/30 * * * *", async () => {
 		try {
 			const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
@@ -27,6 +27,8 @@ export const deleteUnverifiedUsers = async () => {
 			console.error("Cron Job: Error while deleting unverified users:", error);
 		}
 
-		console.log("User delete cron schedule (every 10 minutes)");
-	});
+		console.log("User delete cron schedule (every 30 minutes)");
+	},
+		{ timezone: "Asia/Dhaka" },
+	);
 };

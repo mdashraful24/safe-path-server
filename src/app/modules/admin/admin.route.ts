@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAdmin, requireAuth } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
+import { IncidentController } from "../incidents/incident.controller";
+import { incidentValidation } from "../incidents/incident.validation";
 import { AdminController } from "./admin.controller";
 import { adminValidation } from "./admin.validation";
 
@@ -31,6 +33,14 @@ router.post(
 	"/change-requests",
 	validateRequest(adminValidation.createChangeRequest),
 	AdminController.createChangeRequest,
+);
+
+router.get("/incidents", IncidentController.listIncidentsForAdmin);
+router.get("/incidents/:incidentId", IncidentController.getIncidentForAdmin);
+router.patch(
+	"/incidents/:incidentId/review",
+	validateRequest(incidentValidation.review),
+	IncidentController.reviewIncident,
 );
 
 export const AdminRoutes = router;

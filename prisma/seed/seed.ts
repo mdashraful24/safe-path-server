@@ -30,10 +30,19 @@ const createSeedAccount = async (
 
 	const existing = await prisma.user.findUnique({
 		where: { email },
-		select: { id: true },
+		select: { id: true, role: true },
 	});
 
 	if (existing) {
+		if (account.syncRole && existing.role !== account.role) {
+			await prisma.user.update({
+				where: { id: existing.id },
+				data: { role: account.role },
+			});
+			logger.info(`${account.label} Role synced to ${account.role}`);
+			return "existing";
+		}
+
 		logger.info(`${account.label} Already Exists!`);
 		return "existing";
 	}
@@ -69,12 +78,24 @@ const createSeedAccount = async (
 
 export const seedSuperAdmin = (): Promise<SeedAccountResult> =>
 	createSeedAccount({
+		label: "Super Admin",
+		name: config.seed_super_admin_name,
+		email: config.seed_super_admin_email,
+		password: config.seed_super_admin_password,
+		role: Role.SUPER_ADMIN,
+		imageUrl: "https://picsum.photos/seed/safepath-super-admin/256/256",
+		syncRole: true,
+	});
+
+export const seedAdmin = (): Promise<SeedAccountResult> =>
+	createSeedAccount({
 		label: "Admin",
 		name: config.seed_admin_name,
 		email: config.seed_admin_email,
 		password: config.seed_admin_password,
 		role: Role.ADMIN,
 		imageUrl: "https://picsum.photos/seed/safepath-admin/256/256",
+		syncRole: true,
 	});
 
 export const seedDemoUser = (): Promise<SeedAccountResult> =>
@@ -158,6 +179,7 @@ export const seedDemoIncidents = async (): Promise<SeedIncidentsResult> => {
 
 export const seedDatabase = async (): Promise<void> => {
 	await seedSuperAdmin();
+	await seedAdmin();
 	await seedDemoUser();
 	await seedDemoIncidents();
 };

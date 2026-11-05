@@ -39,6 +39,9 @@ export default {
 		process.env.REGISTRATION_SESSION_EXPIRES_IN_SECONDS!,
 
 	seed_on_start: process.env.SEED_ON_START!,
+	seed_super_admin_name: process.env.SEED_SUPER_ADMIN_NAME!,
+	seed_super_admin_email: process.env.SEED_SUPER_ADMIN_EMAIL!,
+	seed_super_admin_password: process.env.SEED_SUPER_ADMIN_PASSWORD!,
 	seed_admin_name: process.env.SEED_ADMIN_NAME!,
 	seed_admin_email: process.env.SEED_ADMIN_EMAIL!,
 	seed_admin_password: process.env.SEED_ADMIN_PASSWORD!,

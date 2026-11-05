@@ -83,6 +83,13 @@ export const requireAuth = catchAsync(async (req, _res, next) => {
 		);
 	}
 
+	if (user.status === "PENDING_DELETION") {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account deletion request is pending administrator approval.",
+		);
+	}
+
 	if (!user.emailVerified) {
 		throw new AppError(
 			httpStatus.FORBIDDEN,
@@ -113,3 +120,27 @@ export const currentUser = (req: { user?: AuthUser }): AuthUser => {
 	}
 	return req.user;
 };
+
+export const requireAdmin = catchAsync(async (req, _res, next) => {
+	const role = currentUser(req).role;
+
+	if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Administrator access is required.",
+		);
+	}
+
+	next();
+});
+
+export const requireSuperAdmin = catchAsync(async (req, _res, next) => {
+	if (currentUser(req).role !== "SUPER_ADMIN") {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Super administrator access is required.",
+		);
+	}
+
+	next();
+});

@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import httpStatus from "http-status";
+import multer from "multer";
 import { Prisma } from "../../../generated/prisma/client";
 import config from "../config";
 import { AppError } from "../utils/AppError";
@@ -16,6 +17,12 @@ export const globalErrorHandler: ErrorRequestHandler = (
 	if (err instanceof AppError) {
 		statusCode = err.statusCode;
 		message = err.message;
+	} else if (err instanceof multer.MulterError) {
+		statusCode = err.code === "LIMIT_FILE_SIZE" ? 413 : httpStatus.BAD_REQUEST;
+		message =
+			err.code === "LIMIT_FILE_SIZE"
+				? "Image size must be 5 MB or less."
+				: err.message;
 	} else if (err instanceof Prisma.PrismaClientKnownRequestError) {
 		if (err.code === "P2002") {
 			statusCode = httpStatus.CONFLICT;

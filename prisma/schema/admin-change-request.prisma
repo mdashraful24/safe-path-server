@@ -1,0 +1,29 @@
+model AdminChangeRequest {
+  id String @id @default(uuid())
+
+  requesterId String
+  requester   User   @relation("ChangeRequestsCreated", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  targetUserId String
+  targetUser   User   @relation("ChangeRequestsTargeted", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  type                 AdminChangeRequestType
+  reason               String
+  requestedEmail       String?
+  requestedPasswordHash String?
+
+  status AdminChangeRequestStatus @default(PENDING)
+
+  reviewedById String?
+  reviewedBy   User?   @relation("ChangeRequestsReviewed", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote   String?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([targetUserId])
+  @@map("admin_change_requests")
+}

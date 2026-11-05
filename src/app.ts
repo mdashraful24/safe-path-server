@@ -9,7 +9,10 @@ import {
 	globalErrorHandler,
 	notFound,
 } from "./app/middlewares/globalErrorHandler";
+import { AdminRoutes } from "./app/modules/admin/admin.route";
 import { AuthRoutes } from "./app/modules/auth/auth.route";
+import { SuperAdminRoutes } from "./app/modules/super-admin/super-admin.route";
+import { UserRoutes } from "./app/modules/user/user.route";
 
 const app = express();
 
@@ -54,6 +57,9 @@ app.get("/health", (_req, res) => {
 });
 
 app.use(`${apiPrefix}/auth`, AuthRoutes);
+app.use(`${apiPrefix}/users`, UserRoutes);
+app.use(`${apiPrefix}/admin`, AdminRoutes);
+app.use(`${apiPrefix}/super-admin`, SuperAdminRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);

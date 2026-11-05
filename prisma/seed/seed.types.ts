@@ -11,6 +11,7 @@ export type SeedAccount = {
 	password: string;
 	role: Role;
 	imageUrl: string | null;
+	syncRole?: boolean;
 };
 
 export type SeedAccountResult = "created" | "existing";

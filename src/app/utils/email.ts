@@ -5,6 +5,17 @@ const isEmailConfigured = Boolean(config.smtp_user && config.smtp_password);
 
 type Email = { to: string; name: string };
 type OtpEmail = Email & { otp: string; expiresInMinutes: number };
+type ChangeRequestEmail = {
+	to: string;
+	name: string;
+	requesterName: string;
+	requesterEmail: string;
+	targetName: string;
+	targetEmail: string;
+	type: "EMAIL" | "PASSWORD";
+	reason: string;
+	requestedEmail?: string | null;
+};
 
 const signature = "SafePath - Personal Safety & Incident Reporting Platform";
 
@@ -97,6 +108,118 @@ export const sendPasswordChangedEmail = async ({
 			"The password for your SafePath account was changed successfully.",
 			"",
 			"If you did not make this change, reset your password immediately and contact support.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendAccountDeletionApprovedEmail = async ({
+	to,
+	name,
+}: Email): Promise<void> => {
+	await send(
+		to,
+		"Your SafePath Account Has Been Deleted",
+		[
+			`Hi ${name},`,
+			"",
+			"Your account deletion request has been approved. Your SafePath profile has been deleted.",
+			"",
+			"You will no longer be able to sign in with this account.",
+			"If you believe this was a mistake, please contact support.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendAccountDeletionRejectedEmail = async ({
+	to,
+	name,
+	reason,
+}: Email & { reason: string }): Promise<void> => {
+	await send(
+		to,
+		"Your SafePath Account Deletion Request Was Not Approved",
+		[
+			`Hi ${name},`,
+			"",
+			"Your request to delete your SafePath account was reviewed and was not approved.",
+			"",
+			`Reason: ${reason}`,
+			"",
+			"Your account remains active. You can sign in again with your existing credentials.",
+			"",
+			"If you did not request account deletion, change your password immediately and contact support.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendAdminChangeRequestEmail = async ({
+	to,
+	name,
+	requesterName,
+	requesterEmail,
+	targetName,
+	targetEmail,
+	type,
+	reason,
+	requestedEmail,
+}: ChangeRequestEmail): Promise<void> => {
+	await send(
+		to,
+		"New Admin Change Request - SafePath",
+		[
+			`Hi ${name},`,
+			"",
+			`${requesterName} (${requesterEmail}) submitted a request to change the ${type.toLowerCase()} for ${targetName} (${targetEmail}).`,
+			"",
+			`Reason: ${reason}`,
+			...(requestedEmail ? ["", `Requested email: ${requestedEmail}`] : []),
+			"",
+			"Please review the request in the SafePath super admin panel.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendAdminChangeRequestApprovedEmail = async ({
+	to,
+	name,
+	type,
+}: Email & { type: "EMAIL" | "PASSWORD" }): Promise<void> => {
+	await send(
+		to,
+		"Admin Change Request Approved - SafePath",
+		[
+			`Hi ${name},`,
+			"",
+			`Your request to change the ${type.toLowerCase()} was approved and applied.`,
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendAdminChangeRequestRejectedEmail = async ({
+	to,
+	name,
+	type,
+	reason,
+}: Email & { type: "EMAIL" | "PASSWORD"; reason: string }): Promise<void> => {
+	await send(
+		to,
+		"Admin Change Request Rejected - SafePath",
+		[
+			`Hi ${name},`,
+			"",
+			`Your request to change the ${type.toLowerCase()} was rejected.`,
+			"",
+			`Reason: ${reason}`,
 			"",
 			signature,
 		].join("\n"),

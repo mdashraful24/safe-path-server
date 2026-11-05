@@ -12,6 +12,11 @@ model User {
   role   Role       @default(USER)
   status UserStatus @default(ACTIVE)
 
+  deletionRequestedAt     DateTime?
+  deletionRequestReason   String?
+  deletionRejectionReason String?
+  deletionRejectedAt      DateTime?
+
   emailVerified   Boolean   @default(false)
   emailVerifiedAt DateTime?
 
@@ -31,7 +36,12 @@ model User {
   reviewedIncidents Incident[]        @relation("ReviewedIncidents")
   incidentChanges   IncidentHistory[] @relation("IncidentChanges")
 
+  changeRequestsCreated  AdminChangeRequest[] @relation("ChangeRequestsCreated")
+  changeRequestsTargeted AdminChangeRequest[] @relation("ChangeRequestsTargeted")
+  changeRequestsReviewed AdminChangeRequest[] @relation("ChangeRequestsReviewed")
+
   @@index([role])
   @@index([status])
+  @@index([deletionRequestedAt])
   @@map("users")
 }

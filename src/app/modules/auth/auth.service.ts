@@ -240,6 +240,13 @@ const login = async (payload: ILoginPayload) => {
 		throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
 	}
 
+	if (user.status === UserStatus.PENDING_DELETION) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account deletion request is pending administrator approval.",
+		);
+	}
+
 	if (user.status === UserStatus.BLOCKED) {
 		throw new AppError(httpStatus.FORBIDDEN, "User is blocked.");
 	}

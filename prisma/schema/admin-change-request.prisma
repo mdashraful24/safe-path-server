@@ -7,15 +7,15 @@ model AdminChangeRequest {
   targetUserId String
   targetUser   User   @relation("ChangeRequestsTargeted", fields: [targetUserId], references: [id], onDelete: Cascade)
 
-  type                 AdminChangeRequestType
-  reason               String
-  requestedEmail       String?
+  type                  AdminChangeRequestType
+  reason                String
+  requestedEmail        String?
   requestedPasswordHash String?
 
   status AdminChangeRequestStatus @default(PENDING)
 
   reviewedById String?
-  reviewedBy   User?   @relation("ChangeRequestsReviewed", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedBy   User?     @relation("ChangeRequestsReviewed", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewNote   String?
   reviewedAt   DateTime?
 

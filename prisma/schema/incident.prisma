@@ -20,7 +20,7 @@ model Incident {
   reporter   User   @relation("ReportedIncidents", fields: [reporterId], references: [id], onDelete: Restrict)
 
   reviewedById String?
-  reviewedBy   User?   @relation("ReviewedIncidents", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedBy   User?     @relation("ReviewedIncidents", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewNote   String?
   reviewedAt   DateTime?
 

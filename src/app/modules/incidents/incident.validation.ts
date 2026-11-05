@@ -1,6 +1,7 @@
 import httpStatus from "http-status";
 import { z } from "zod";
 import { AppError } from "../../utils/AppError";
+import { incidentSortFields } from "./incident.interface";
 
 const categorySchema = z.enum([
 	"HARASSMENT",
@@ -101,6 +102,9 @@ const listQuerySchema = z
 		category: categorySchema.optional(),
 		status: statusSchema.optional(),
 		search: optionalText(100),
+		searchTerm: optionalText(100),
+		sortBy: z.enum(incidentSortFields).optional(),
+		sortOrder: z.enum(["asc", "desc"]).optional(),
 	})
 	.strict();
 

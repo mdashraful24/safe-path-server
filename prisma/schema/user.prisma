@@ -16,6 +16,12 @@ model User {
   deletionRequestReason   String?
   deletionRejectionReason String?
   deletionRejectedAt      DateTime?
+  deletionApprovedAt      DateTime?
+
+  restoreDeadline DateTime?
+  purgeAfter      DateTime?
+  restoredAt      DateTime?
+  purgedAt        DateTime?
 
   emailVerified   Boolean   @default(false)
   emailVerifiedAt DateTime?
@@ -40,8 +46,14 @@ model User {
   changeRequestsTargeted AdminChangeRequest[] @relation("ChangeRequestsTargeted")
   changeRequestsReviewed AdminChangeRequest[] @relation("ChangeRequestsReviewed")
 
+  accountLifecycleEvents  AccountLifecycleEvent[] @relation("AccountLifecycleEvents")
+  accountLifecycleActions AccountLifecycleEvent[] @relation("AccountLifecycleActions")
+
   @@index([role])
   @@index([status])
+  @@index([status, purgeAfter])
   @@index([deletionRequestedAt])
+  @@index([restoreDeadline])
+  @@index([purgeAfter])
   @@map("users")
 }

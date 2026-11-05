@@ -7,12 +7,15 @@ import type {
 	IUpdateUserRolePayload,
 } from "./super-admin.interface";
 import { SuperAdminService } from "./super-admin.service";
+import {
+	parseAdminListQuery,
+	parseChangeRequestListQuery,
+} from "./super-admin.validation";
 
 const listAdmins = catchAsync(async (req, res) => {
 	const result = await SuperAdminService.listAdmins(
 		currentUser(req).id,
-		req.query.page,
-		req.query.limit,
+		parseAdminListQuery(req.query),
 	);
 
 	sendResponse(res, {
@@ -42,8 +45,7 @@ const updateUserRole = catchAsync(async (req, res) => {
 
 const getChangeRequests = catchAsync(async (req, res) => {
 	const result = await SuperAdminService.getChangeRequests(
-		req.query.page,
-		req.query.limit,
+		parseChangeRequestListQuery(req.query),
 	);
 
 	sendResponse(res, {

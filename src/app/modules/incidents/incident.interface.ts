@@ -19,6 +19,18 @@ export interface IReviewIncidentPayload {
 	note?: string;
 }
 
+export const incidentSortFields = [
+	"title",
+	"category",
+	"status",
+	"area",
+	"incidentDate",
+	"createdAt",
+	"updatedAt",
+] as const;
+
+export type IncidentSortField = (typeof incidentSortFields)[number];
+
 export interface IIncidentListQuery {
 	page?: number;
 	limit?: number;
@@ -26,4 +38,7 @@ export interface IIncidentListQuery {
 	category?: IncidentCategory;
 	status?: IncidentStatus;
 	search?: string;
+	searchTerm?: string;
+	sortBy?: IncidentSortField;
+	sortOrder?: "asc" | "desc";
 }

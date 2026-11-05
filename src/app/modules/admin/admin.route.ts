@@ -20,6 +20,11 @@ router.patch(
 	AdminController.updateUserStatus,
 );
 router.patch(
+	"/users/:userId/restore",
+	validateRequest(adminValidation.restoreAccount),
+	AdminController.restoreDeletedAccount,
+);
+router.patch(
 	"/users/deletion-requests/:userId/approve",
 	AdminController.approveAccountDeletion,
 );

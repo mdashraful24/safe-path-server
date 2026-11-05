@@ -1,11 +1,11 @@
+import { seedDatabase } from "../prisma/seed/seed";
 import app from "./app";
 import config from "./app/config";
-import { deleteUnverifiedUsers } from "./app/lib/cron";
+import { deleteUnverifiedUsers, purgeDeletedAccounts } from "./app/lib/cron";
 import { transporter } from "./app/lib/nodemailer";
 import { prisma } from "./app/lib/prisma";
 import { redisClient } from "./app/lib/redis";
 import logger from "./app/logger";
-import { seedDatabase } from "../prisma/seed/seed";
 
 const PORT = Number(config.port);
 
@@ -23,6 +23,7 @@ const main = async () => {
 		await seedDatabase();
 
 		await deleteUnverifiedUsers();
+		await purgeDeletedAccounts();
 
 		const server = app.listen(PORT, () => {
 			logger.info(`Server is running on port ${PORT}`);

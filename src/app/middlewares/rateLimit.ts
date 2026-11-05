@@ -27,3 +27,12 @@ export const loginLimiter = rateLimit({
 		"Too many failed login attempts. Please try again in 15 minutes.",
 	),
 });
+
+export const otpLimiter = rateLimit({
+	...common,
+	limit: 10,
+	skipSuccessfulRequests: true,
+	message: tooMany(
+		"Too many verification attempts. Please try again in 15 minutes.",
+	),
+});

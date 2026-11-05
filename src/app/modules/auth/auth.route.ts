@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth";
-import { authLimiter, loginLimiter } from "../../middlewares/rateLimit";
+import {
+	authLimiter,
+	loginLimiter,
+	otpLimiter,
+} from "../../middlewares/rateLimit";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { AuthController } from "./auth.controller";
 import { authValidation } from "./auth.validation";
@@ -58,6 +62,20 @@ router.post(
 	authLimiter,
 	validateRequest(authValidation.resetPassword),
 	AuthController.resetPassword,
+);
+
+router.post(
+	"/restore/request",
+	authLimiter,
+	validateRequest(authValidation.requestAccountRestore),
+	AuthController.requestAccountRestore,
+);
+
+router.post(
+	"/restore/verify",
+	otpLimiter,
+	validateRequest(authValidation.verifyAccountRestore),
+	AuthController.verifyAccountRestore,
 );
 
 router.post("/logout", authLimiter, AuthController.logout);

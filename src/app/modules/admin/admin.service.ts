@@ -1,5 +1,7 @@
 import httpStatus from "http-status";
+import type { Prisma } from "../../../../generated/prisma/client";
 import {
+	AccountLifecycleEventType,
 	AdminChangeRequestType,
 	Role,
 	UserStatus,
@@ -9,6 +11,11 @@ import { prisma } from "../../lib/prisma";
 import logger from "../../logger";
 import { AppError } from "../../utils/AppError";
 import {
+	canAdminRestore,
+	getAccountLifecycleDates,
+	isAccountUnavailable,
+} from "../../utils/accountLifecycle";
+import {
 	sendAccountDeletionApprovedEmail,
 	sendAccountDeletionRejectedEmail,
 	sendAdminChangeRequestEmail,
@@ -17,21 +24,49 @@ import { getPagination } from "../../utils/pagination";
 import { hashPassword } from "../../utils/password";
 import type {
 	IAdminChangeRequestPayload,
+	IAdminUserListQuery,
+	IDeletionRequestListQuery,
 	IUpdateUserStatusPayload,
 } from "./admin.interface";
 
-const listUsers = async (
-	requesterRole: Role,
-	pageValue: unknown,
-	limitValue: unknown,
-) => {
-	const where = requesterRole === Role.SUPER_ADMIN ? {} : { role: Role.USER };
-	const { page, limit, skip } = getPagination(pageValue, limitValue);
+const listUsers = async (requesterRole: Role, query: IAdminUserListQuery) => {
+	const { page, limit, skip } = getPagination(query.page, query.limit);
+	const andConditions: Prisma.UserWhereInput[] = [];
+
+	if (requesterRole === Role.SUPER_ADMIN) {
+		if (query.role) {
+			andConditions.push({ role: query.role });
+		}
+	} else {
+		andConditions.push({ role: Role.USER });
+	}
+
+	if (query.status) {
+		andConditions.push({ status: query.status });
+	} else {
+		andConditions.push({ status: { not: UserStatus.PURGED } });
+	}
+
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{ name: { contains: query.searchTerm, mode: "insensitive" } },
+				{ email: { contains: query.searchTerm, mode: "insensitive" } },
+			],
+		});
+	}
+
+	const where: Prisma.UserWhereInput =
+		andConditions.length > 0 ? { AND: andConditions } : {};
+	const orderBy = [
+		{ [query.sortBy ?? "createdAt"]: query.sortOrder ?? "desc" },
+		{ id: "asc" },
+	] as Prisma.UserOrderByWithRelationInput[];
 
 	const [users, totalUsers] = await Promise.all([
 		prisma.user.findMany({
 			where,
-			orderBy: { createdAt: "desc" },
+			orderBy,
 			skip,
 			take: limit,
 			omit: { passwordHash: true },
@@ -93,7 +128,7 @@ const updateUserStatus = async (
 		select: { id: true, role: true, status: true, isDeleted: true },
 	});
 
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
+	if (!user || isAccountUnavailable(user)) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
@@ -120,19 +155,42 @@ const updateUserStatus = async (
 
 const getDeletionRequests = async (
 	requesterRole: Role,
-	pageValue: unknown,
-	limitValue: unknown,
+	query: IDeletionRequestListQuery,
 ) => {
-	const where = {
-		status: UserStatus.PENDING_DELETION,
-		...(requesterRole === Role.SUPER_ADMIN ? {} : { role: Role.USER }),
+	const { page, limit, skip } = getPagination(query.page, query.limit);
+	const andConditions: Prisma.UserWhereInput[] = [
+		{ status: UserStatus.PENDING_DELETION },
+	];
+
+	if (requesterRole === Role.SUPER_ADMIN) {
+		if (query.role) {
+			andConditions.push({ role: query.role });
+		}
+	} else {
+		andConditions.push({ role: Role.USER });
+	}
+
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{ name: { contains: query.searchTerm, mode: "insensitive" } },
+				{ email: { contains: query.searchTerm, mode: "insensitive" } },
+			],
+		});
+	}
+
+	const where: Prisma.UserWhereInput = {
+		AND: andConditions,
 	};
-	const { page, limit, skip } = getPagination(pageValue, limitValue);
+	const orderBy = [
+		{ [query.sortBy ?? "deletionRequestedAt"]: query.sortOrder ?? "asc" },
+		{ id: "asc" },
+	] as Prisma.UserOrderByWithRelationInput[];
 
 	const [requests, totalDeletionRequests] = await Promise.all([
 		prisma.user.findMany({
 			where,
-			orderBy: { deletionRequestedAt: "asc" },
+			orderBy,
 			skip,
 			take: limit,
 			select: {
@@ -160,7 +218,11 @@ const getDeletionRequests = async (
 	};
 };
 
-const approveAccountDeletion = async (requesterRole: Role, userId: string) => {
+const approveAccountDeletion = async (
+	requesterRole: Role,
+	requesterId: string,
+	userId: string,
+) => {
 	const user = await prisma.user.findFirst({
 		where: {
 			id: userId,
@@ -176,19 +238,37 @@ const approveAccountDeletion = async (requesterRole: Role, userId: string) => {
 		);
 	}
 
+	const approvedAt = new Date();
+	const lifecycleDates = getAccountLifecycleDates(approvedAt);
+
 	await prisma.$transaction([
 		prisma.user.update({
 			where: { id: user.id },
 			data: {
 				status: UserStatus.DELETED,
 				isDeleted: true,
-				deletedAt: new Date(),
+				deletedAt: approvedAt,
+				deletionApprovedAt: approvedAt,
+				restoreDeadline: lifecycleDates.restoreDeadline,
+				purgeAfter: lifecycleDates.purgeAfter,
 				imageUrl: null,
 				imagePublicId: null,
 				tokenVersion: { increment: 1 },
 			},
 		}),
 		prisma.session.deleteMany({ where: { userId: user.id } }),
+		prisma.accountLifecycleEvent.create({
+			data: {
+				userId: user.id,
+				actorId: requesterId,
+				type: AccountLifecycleEventType.DELETION_APPROVED,
+				metadata: {
+					method: "ADMIN",
+					restoreDeadline: lifecycleDates.restoreDeadline.toISOString(),
+					purgeAfter: lifecycleDates.purgeAfter.toISOString(),
+				},
+			},
+		}),
 	]);
 
 	if (user.imagePublicId) {
@@ -199,6 +279,7 @@ const approveAccountDeletion = async (requesterRole: Role, userId: string) => {
 		await sendAccountDeletionApprovedEmail({
 			to: user.email,
 			name: user.name,
+			restoreDeadline: lifecycleDates.restoreDeadline,
 		});
 	} catch (error) {
 		logger.error("Failed to send account deletion confirmation email:", error);
@@ -209,6 +290,7 @@ const approveAccountDeletion = async (requesterRole: Role, userId: string) => {
 
 const rejectAccountDeletion = async (
 	requesterRole: Role,
+	requesterId: string,
 	userId: string,
 	reason: string,
 ) => {
@@ -227,16 +309,29 @@ const rejectAccountDeletion = async (
 		);
 	}
 
-	await prisma.user.update({
-		where: { id: user.id },
-		data: {
-			status: UserStatus.ACTIVE,
-			deletionRequestedAt: null,
-			deletionRequestReason: null,
-			deletionRejectionReason: reason,
-			deletionRejectedAt: new Date(),
-		},
-	});
+	const rejectedAt = new Date();
+
+	await prisma.$transaction([
+		prisma.user.update({
+			where: { id: user.id },
+			data: {
+				status: UserStatus.ACTIVE,
+				deletionRequestedAt: null,
+				deletionRequestReason: null,
+				deletionRejectionReason: reason,
+				deletionRejectedAt: rejectedAt,
+			},
+		}),
+		prisma.accountLifecycleEvent.create({
+			data: {
+				userId: user.id,
+				actorId: requesterId,
+				type: AccountLifecycleEventType.DELETION_REJECTED,
+				reason,
+				metadata: { method: "ADMIN" },
+			},
+		}),
+	]);
 
 	try {
 		await sendAccountDeletionRejectedEmail({
@@ -249,6 +344,86 @@ const rejectAccountDeletion = async (
 	}
 
 	return { id: user.id, email: user.email };
+};
+
+const restoreDeletedAccount = async (
+	requesterRole: Role,
+	requesterId: string,
+	userId: string,
+	reason: string,
+) => {
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: {
+			id: true,
+			email: true,
+			role: true,
+			status: true,
+			isDeleted: true,
+			deletedAt: true,
+			restoreDeadline: true,
+			purgeAfter: true,
+		},
+	});
+
+	if (
+		!user ||
+		(requesterRole !== Role.SUPER_ADMIN && user.role !== Role.USER)
+	) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
+	}
+
+	if (user.status === UserStatus.PURGED) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Purged accounts cannot be restored.",
+		);
+	}
+
+	if (!canAdminRestore(user)) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			user.status === UserStatus.DELETED
+				? "The account restoration window has expired."
+				: "Account is not deleted and cannot be restored.",
+		);
+	}
+
+	const restoredAt = new Date();
+
+	const [restoredUser] = await prisma.$transaction([
+		prisma.user.update({
+			where: { id: user.id },
+			data: {
+				status: UserStatus.ACTIVE,
+				isDeleted: false,
+				deletedAt: null,
+				deletionRequestedAt: null,
+				deletionRequestReason: null,
+				deletionRejectionReason: null,
+				deletionRejectedAt: null,
+				deletionApprovedAt: null,
+				restoreDeadline: null,
+				purgeAfter: null,
+				purgedAt: null,
+				restoredAt,
+				tokenVersion: { increment: 1 },
+			},
+			omit: { passwordHash: true },
+		}),
+		prisma.session.deleteMany({ where: { userId: user.id } }),
+		prisma.accountLifecycleEvent.create({
+			data: {
+				userId: user.id,
+				actorId: requesterId,
+				type: AccountLifecycleEventType.RESTORED,
+				reason,
+				metadata: { method: "ADMIN" },
+			},
+		}),
+	]);
+
+	return restoredUser;
 };
 
 const createChangeRequest = async (
@@ -274,11 +449,7 @@ const createChangeRequest = async (
 		},
 	});
 
-	if (
-		!requester ||
-		requester.isDeleted ||
-		requester.status === UserStatus.DELETED
-	) {
+	if (!requester || isAccountUnavailable(requester)) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
@@ -368,5 +539,6 @@ export const AdminService = {
 	getDeletionRequests,
 	approveAccountDeletion,
 	rejectAccountDeletion,
+	restoreDeletedAccount,
 	createChangeRequest,
 };

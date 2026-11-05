@@ -9,6 +9,16 @@ enum UserStatus {
   BLOCKED
   PENDING_DELETION
   DELETED
+  PURGED
+}
+
+enum AccountLifecycleEventType {
+  DELETION_REQUESTED
+  DELETION_APPROVED
+  DELETION_REJECTED
+  RESTORE_REQUESTED
+  RESTORED
+  PURGED
 }
 
 enum AdminChangeRequestType {

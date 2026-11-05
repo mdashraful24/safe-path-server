@@ -62,4 +62,13 @@ export const authValidation = {
 		otp: otpSchema,
 		newPassword: passwordSchema,
 	}),
+
+	requestAccountRestore: z.object({
+		email: emailSchema,
+	}),
+
+	verifyAccountRestore: z.object({
+		email: emailSchema,
+		otp: otpSchema,
+	}),
 };

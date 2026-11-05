@@ -38,6 +38,11 @@ export default {
 	registration_session_expires_in_seconds:
 		process.env.REGISTRATION_SESSION_EXPIRES_IN_SECONDS!,
 
+	account_restore_grace_days: process.env.ACCOUNT_RESTORE_GRACE_DAYS || "30",
+	account_deletion_retention_days:
+		process.env.ACCOUNT_DELETION_RETENTION_DAYS || "90",
+	account_purge_batch_size: process.env.ACCOUNT_PURGE_BATCH_SIZE || "100",
+
 	seed_on_start: process.env.SEED_ON_START!,
 	seed_super_admin_name: process.env.SEED_SUPER_ADMIN_NAME!,
 	seed_super_admin_email: process.env.SEED_SUPER_ADMIN_EMAIL!,

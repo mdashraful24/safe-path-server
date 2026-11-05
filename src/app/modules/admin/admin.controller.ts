@@ -8,12 +8,15 @@ import type {
 	IUpdateUserStatusPayload,
 } from "./admin.interface";
 import { AdminService } from "./admin.service";
+import {
+	parseAdminUserListQuery,
+	parseDeletionRequestListQuery,
+} from "./admin.validation";
 
 const listUsers = catchAsync(async (req, res) => {
 	const result = await AdminService.listUsers(
 		currentUser(req).role,
-		req.query.page,
-		req.query.limit,
+		parseAdminUserListQuery(req.query),
 	);
 
 	sendResponse(res, {
@@ -61,8 +64,7 @@ const updateUserStatus = catchAsync(async (req, res) => {
 const getDeletionRequests = catchAsync(async (req, res) => {
 	const result = await AdminService.getDeletionRequests(
 		currentUser(req).role,
-		req.query.page,
-		req.query.limit,
+		parseDeletionRequestListQuery(req.query),
 	);
 
 	sendResponse(res, {
@@ -78,6 +80,7 @@ const approveAccountDeletion = catchAsync(async (req, res) => {
 	const userId = String(req.params.userId);
 	const result = await AdminService.approveAccountDeletion(
 		currentUser(req).role,
+		currentUser(req).id,
 		userId,
 	);
 
@@ -93,6 +96,7 @@ const rejectAccountDeletion = catchAsync(async (req, res) => {
 	const userId = String(req.params.userId);
 	const result = await AdminService.rejectAccountDeletion(
 		currentUser(req).role,
+		currentUser(req).id,
 		userId,
 		(req.body as IRejectPayload).reason,
 	);
@@ -102,6 +106,23 @@ const rejectAccountDeletion = catchAsync(async (req, res) => {
 		success: true,
 		message: "Account deletion rejected. The account remains active.",
 		data: result,
+	});
+});
+
+const restoreDeletedAccount = catchAsync(async (req, res) => {
+	const userId = String(req.params.userId);
+	const user = await AdminService.restoreDeletedAccount(
+		currentUser(req).role,
+		currentUser(req).id,
+		userId,
+		(req.body as IRejectPayload).reason,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Account restored successfully.",
+		data: user,
 	});
 });
 
@@ -127,5 +148,6 @@ export const AdminController = {
 	getDeletionRequests,
 	approveAccountDeletion,
 	rejectAccountDeletion,
+	restoreDeletedAccount,
 	createChangeRequest,
 };

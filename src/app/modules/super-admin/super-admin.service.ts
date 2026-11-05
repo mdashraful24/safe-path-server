@@ -1,4 +1,5 @@
 import httpStatus from "http-status";
+import type { Prisma } from "../../../../generated/prisma/client";
 import {
 	AdminChangeRequestStatus,
 	AdminChangeRequestType,
@@ -8,30 +9,50 @@ import {
 import { prisma } from "../../lib/prisma";
 import logger from "../../logger";
 import { AppError } from "../../utils/AppError";
+import { isAccountUnavailable } from "../../utils/accountLifecycle";
 import {
 	sendAdminChangeRequestApprovedEmail,
 	sendAdminChangeRequestRejectedEmail,
 	sendPasswordChangedEmail,
 } from "../../utils/email";
 import { getPagination } from "../../utils/pagination";
-import type { IUpdateUserRolePayload } from "./super-admin.interface";
+import type {
+	IAdminListQuery,
+	IChangeRequestListQuery,
+	IUpdateUserRolePayload,
+} from "./super-admin.interface";
 
-const listAdmins = async (
-	requesterId: string,
-	pageValue: unknown,
-	limitValue: unknown,
-) => {
-	const where = {
-		id: { not: requesterId },
-		role: { in: [Role.ADMIN, Role.SUPER_ADMIN] },
-		isDeleted: false,
-	};
-	const { page, limit, skip } = getPagination(pageValue, limitValue);
+const listAdmins = async (requesterId: string, query: IAdminListQuery) => {
+	const { page, limit, skip } = getPagination(query.page, query.limit);
+	const andConditions: Prisma.UserWhereInput[] = [
+		{ id: { not: requesterId } },
+		{ role: query.role ?? { in: [Role.ADMIN, Role.SUPER_ADMIN] } },
+		{ isDeleted: false },
+	];
+
+	if (query.status) {
+		andConditions.push({ status: query.status });
+	}
+
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{ name: { contains: query.searchTerm, mode: "insensitive" } },
+				{ email: { contains: query.searchTerm, mode: "insensitive" } },
+			],
+		});
+	}
+
+	const where: Prisma.UserWhereInput = { AND: andConditions };
+	const orderBy = [
+		{ [query.sortBy ?? "createdAt"]: query.sortOrder ?? "desc" },
+		{ id: "asc" },
+	] as Prisma.UserOrderByWithRelationInput[];
 
 	const [admins, totalAdmins] = await Promise.all([
 		prisma.user.findMany({
 			where,
-			orderBy: { createdAt: "desc" },
+			orderBy,
 			skip,
 			take: limit,
 			omit: { passwordHash: true },
@@ -67,7 +88,7 @@ const updateUserRole = async (
 		select: { id: true, role: true, status: true, isDeleted: true },
 	});
 
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
+	if (!user || isAccountUnavailable(user)) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
@@ -101,14 +122,83 @@ const updateUserRole = async (
 	});
 };
 
-const getChangeRequests = async (pageValue: unknown, limitValue: unknown) => {
-	const where = { status: AdminChangeRequestStatus.PENDING };
-	const { page, limit, skip } = getPagination(pageValue, limitValue);
+const getChangeRequests = async (query: IChangeRequestListQuery) => {
+	const { page, limit, skip } = getPagination(query.page, query.limit);
+	const andConditions: Prisma.AdminChangeRequestWhereInput[] = [
+		{ status: query.status ?? AdminChangeRequestStatus.PENDING },
+	];
+
+	if (query.type) {
+		andConditions.push({ type: query.type });
+	}
+
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{
+					requester: {
+						OR: [
+							{
+								name: {
+									contains: query.searchTerm,
+									mode: "insensitive",
+								},
+							},
+							{
+								email: {
+									contains: query.searchTerm,
+									mode: "insensitive",
+								},
+							},
+						],
+					},
+				},
+				{
+					targetUser: {
+						OR: [
+							{
+								name: {
+									contains: query.searchTerm,
+									mode: "insensitive",
+								},
+							},
+							{
+								email: {
+									contains: query.searchTerm,
+									mode: "insensitive",
+								},
+							},
+						],
+					},
+				},
+				{
+					requestedEmail: {
+						contains: query.searchTerm,
+						mode: "insensitive",
+					},
+				},
+				{
+					reason: {
+						contains: query.searchTerm,
+						mode: "insensitive",
+					},
+				},
+			],
+		});
+	}
+
+	const where: Prisma.AdminChangeRequestWhereInput = {
+		AND: andConditions,
+	};
+	const orderBy = [
+		{ [query.sortBy ?? "createdAt"]: query.sortOrder ?? "asc" },
+		{ id: "asc" },
+	] as Prisma.AdminChangeRequestOrderByWithRelationInput[];
 
 	const [requests, totalChangeRequests] = await Promise.all([
 		prisma.adminChangeRequest.findMany({
 			where,
-			orderBy: { createdAt: "asc" },
+			orderBy,
 			skip,
 			take: limit,
 			select: {
@@ -158,8 +248,7 @@ const approveChangeRequest = async (requesterId: string, requestId: string) => {
 		!request ||
 		request.status !== AdminChangeRequestStatus.PENDING ||
 		!request.targetUser ||
-		request.targetUser.isDeleted ||
-		request.targetUser.status === UserStatus.DELETED ||
+		isAccountUnavailable(request.targetUser) ||
 		request.targetUser.status === UserStatus.PENDING_DELETION
 	) {
 		throw new AppError(

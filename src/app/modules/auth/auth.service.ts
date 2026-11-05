@@ -1,11 +1,22 @@
 import { randomInt } from "node:crypto";
 import httpStatus from "http-status";
-import { Role, UserStatus } from "../../../../generated/prisma/enums";
+import {
+	AccountLifecycleEventType,
+	Role,
+	UserStatus,
+} from "../../../../generated/prisma/enums";
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
+import logger from "../../logger";
 import { AppError } from "../../utils/AppError";
 import {
+	canSelfRestore,
+	isAccountActive,
+	isAccountUnavailable,
+} from "../../utils/accountLifecycle";
+import {
+	sendAccountRestoreOtpEmail,
 	sendPasswordChangedEmail,
 	sendPasswordResetOtpEmail,
 	sendRegistrationOtpEmail,
@@ -19,6 +30,8 @@ import type {
 	IRegisterPayload,
 	IResendRegistrationOtpPayload,
 	IResetPasswordPayload,
+	IRestoreAccountRequestPayload,
+	IVerifyAccountRestorePayload,
 	IVerifyEmailPayload,
 } from "./auth.interface";
 
@@ -236,7 +249,7 @@ const login = async (payload: ILoginPayload) => {
 		throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password.");
 	}
 
-	if (user.isDeleted || user.status === UserStatus.DELETED) {
+	if (isAccountUnavailable(user)) {
 		throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
 	}
 
@@ -276,7 +289,7 @@ const getMe = async (userId: string) => {
 		omit: { passwordHash: true },
 	});
 
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
+	if (!user || isAccountUnavailable(user)) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
@@ -302,7 +315,7 @@ const refresh = async (token: string | null) => {
 		where: { id: data.userId },
 	});
 
-	if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
+	if (!user || !isAccountActive(user)) {
 		throw new AppError(
 			httpStatus.UNAUTHORIZED,
 			"User is inactive or not found.",
@@ -318,8 +331,7 @@ const forgotPassword = async (payload: IForgotPasswordPayload) => {
 
 	if (
 		user &&
-		!user.isDeleted &&
-		user.status === UserStatus.ACTIVE &&
+		isAccountActive(user) &&
 		user.emailVerified &&
 		user.role !== Role.ADMIN
 	) {
@@ -359,12 +371,7 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 
 	const user = await prisma.user.findUnique({ where: { email } });
 
-	if (
-		!user ||
-		user.isDeleted ||
-		user.status !== UserStatus.ACTIVE ||
-		user.role === Role.ADMIN
-	) {
+	if (!user || !isAccountActive(user) || user.role === Role.ADMIN) {
 		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
 	}
 
@@ -380,6 +387,140 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 	await sendPasswordChangedEmail({ to: user.email, name: user.name });
 };
 
+const requestAccountRestore = async (
+	payload: IRestoreAccountRequestPayload,
+) => {
+	const email = payload.email.trim().toLowerCase();
+
+	const user = await prisma.user.findUnique({
+		where: { email },
+		select: {
+			id: true,
+			name: true,
+			email: true,
+			status: true,
+			isDeleted: true,
+			deletedAt: true,
+			restoreDeadline: true,
+			purgeAfter: true,
+			emailVerified: true,
+		},
+	});
+
+	if (user && user.emailVerified && canSelfRestore(user)) {
+		const otp = randomInt(100000, 1000000).toString();
+		const key = `account-restore-otp:${email}`;
+
+		await redisClient.set(key, otp, {
+			expiration: { type: "EX", value: OTP_EXPIRATION_IN_SECONDS },
+		});
+
+		try {
+			await sendAccountRestoreOtpEmail({
+				to: user.email,
+				name: user.name,
+				otp,
+				expiresInMinutes: OTP_EXPIRATION_IN_SECONDS / 60,
+			});
+		} catch (error) {
+			logger.error("Failed to send account restore OTP email:", error);
+		}
+
+		await prisma.accountLifecycleEvent.create({
+			data: {
+				userId: user.id,
+				type: AccountLifecycleEventType.RESTORE_REQUESTED,
+				metadata: { method: "SELF" },
+			},
+		});
+	}
+
+	return {
+		expiresIn: OTP_EXPIRATION_IN_SECONDS,
+		expiresAt: new Date(
+			Date.now() + OTP_EXPIRATION_IN_SECONDS * 1000,
+		).toISOString(),
+	};
+};
+
+const verifyAccountRestore = async (payload: IVerifyAccountRestorePayload) => {
+	const email = payload.email.trim().toLowerCase();
+	const otp = payload.otp.trim();
+
+	const key = `account-restore-otp:${email}`;
+	const redisOtp = await redisClient.get(key);
+
+	if (!redisOtp || redisOtp !== otp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
+	}
+
+	const user = await prisma.user.findUnique({
+		where: { email },
+		select: {
+			id: true,
+			status: true,
+			isDeleted: true,
+			deletedAt: true,
+			restoreDeadline: true,
+			purgeAfter: true,
+			emailVerified: true,
+		},
+	});
+
+	if (!user || !user.emailVerified || !canSelfRestore(user)) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
+	}
+
+	const restoredAt = new Date();
+
+	const restoredUser = await prisma.$transaction(async (tx) => {
+		const updated = await tx.user.updateMany({
+			where: { id: user.id, status: UserStatus.DELETED },
+			data: {
+				status: UserStatus.ACTIVE,
+				isDeleted: false,
+				deletedAt: null,
+				deletionRequestedAt: null,
+				deletionRequestReason: null,
+				deletionRejectionReason: null,
+				deletionRejectedAt: null,
+				deletionApprovedAt: null,
+				restoreDeadline: null,
+				purgeAfter: null,
+				purgedAt: null,
+				restoredAt,
+				tokenVersion: { increment: 1 },
+			},
+		});
+
+		if (updated.count !== 1) {
+			throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
+		}
+
+		await tx.session.deleteMany({ where: { userId: user.id } });
+
+		await tx.accountLifecycleEvent.create({
+			data: {
+				userId: user.id,
+				type: AccountLifecycleEventType.RESTORED,
+				metadata: { method: "SELF" },
+			},
+		});
+
+		return tx.user.findUniqueOrThrow({
+			where: { id: user.id },
+			omit: { passwordHash: true },
+		});
+	});
+
+	await redisClient.del(key);
+
+	return {
+		user: restoredUser,
+		...createTokens(restoredUser),
+	};
+};
+
 export const AuthService = {
 	register,
 	resendRegistrationOtp,
@@ -390,4 +531,6 @@ export const AuthService = {
 	forgotPassword,
 	resendForgotPasswordOtp: forgotPassword,
 	resetPassword,
+	requestAccountRestore,
+	verifyAccountRestore,
 };

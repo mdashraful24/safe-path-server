@@ -27,3 +27,12 @@ export interface IResetPasswordPayload {
 	otp: string;
 	newPassword: string;
 }
+
+export interface IRestoreAccountRequestPayload {
+	email: string;
+}
+
+export interface IVerifyAccountRestorePayload {
+	email: string;
+	otp: string;
+}

@@ -1,0 +1,20 @@
+model AccountLifecycleEvent {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation("AccountLifecycleEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  actorId String?
+  actor   User?   @relation("AccountLifecycleActions", fields: [actorId], references: [id], onDelete: SetNull)
+
+  type     AccountLifecycleEventType
+  reason   String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([actorId])
+  @@index([type, createdAt])
+  @@map("account_lifecycle_events")
+}

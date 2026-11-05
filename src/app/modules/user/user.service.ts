@@ -1,8 +1,13 @@
 import httpStatus from "http-status";
-import { Role, UserStatus } from "../../../../generated/prisma/enums";
+import {
+	AccountLifecycleEventType,
+	Role,
+	UserStatus,
+} from "../../../../generated/prisma/enums";
 import { cloudinary, deleteCloudinaryImage } from "../../lib/cloudinary";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { isAccountUnavailable } from "../../utils/accountLifecycle";
 import { hashPassword, verifyPassword } from "../../utils/password";
 import type {
 	IRequestAccountDeletionPayload,
@@ -42,7 +47,7 @@ const getProfile = async (userId: string) => {
 		omit: { passwordHash: true },
 	});
 
-	if (!user || user.isDeleted) {
+	if (!user || isAccountUnavailable(user)) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
@@ -207,7 +212,7 @@ const requestAccountDeletion = async (
 		select: { id: true, status: true, isDeleted: true },
 	});
 
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
+	if (!user || isAccountUnavailable(user)) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
@@ -225,15 +230,27 @@ const requestAccountDeletion = async (
 		);
 	}
 
-	await prisma.user.update({
-		where: { id: userId },
-		data: {
-			status: UserStatus.PENDING_DELETION,
-			deletionRequestedAt: new Date(),
-			deletionRequestReason: payload.reason?.trim() || null,
-			tokenVersion: { increment: 1 },
-		},
-	});
+	const reason = payload.reason?.trim() || null;
+
+	await prisma.$transaction([
+		prisma.user.update({
+			where: { id: userId },
+			data: {
+				status: UserStatus.PENDING_DELETION,
+				deletionRequestedAt: new Date(),
+				deletionRequestReason: reason,
+				tokenVersion: { increment: 1 },
+			},
+		}),
+		prisma.accountLifecycleEvent.create({
+			data: {
+				userId,
+				type: AccountLifecycleEventType.DELETION_REQUESTED,
+				reason,
+				metadata: { method: "SELF" },
+			},
+		}),
+	]);
 };
 
 export const UserService = {

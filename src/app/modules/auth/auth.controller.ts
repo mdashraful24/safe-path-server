@@ -9,6 +9,8 @@ import type {
 	IRegisterPayload,
 	IResendRegistrationOtpPayload,
 	IResetPasswordPayload,
+	IRestoreAccountRequestPayload,
+	IVerifyAccountRestorePayload,
 	IVerifyEmailPayload,
 } from "./auth.interface";
 import { AuthService } from "./auth.service";
@@ -136,6 +138,35 @@ const resetPassword = catchAsync(async (req, res) => {
 	});
 });
 
+const requestAccountRestore = catchAsync(async (req, res) => {
+	const result = await AuthService.requestAccountRestore(
+		req.body as IRestoreAccountRequestPayload,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message:
+			"If the account is eligible for restoration, a verification code has been sent.",
+		data: result,
+	});
+});
+
+const verifyAccountRestore = catchAsync(async (req, res) => {
+	const result = await AuthService.verifyAccountRestore(
+		req.body as IVerifyAccountRestorePayload,
+	);
+
+	setAuthCookies(res, result);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Account restored successfully.",
+		data: result.user,
+	});
+});
+
 export const AuthController = {
 	register,
 	verifyEmail,
@@ -147,4 +178,6 @@ export const AuthController = {
 	forgotPassword,
 	resendForgotPasswordOtp,
 	resetPassword,
+	requestAccountRestore,
+	verifyAccountRestore,
 };

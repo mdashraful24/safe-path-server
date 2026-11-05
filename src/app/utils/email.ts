@@ -95,6 +95,35 @@ export const sendPasswordResetOtpEmail = async ({
 	);
 };
 
+export const sendAccountRestoreOtpEmail = async ({
+	to,
+	name,
+	otp,
+	expiresInMinutes,
+}: OtpEmail): Promise<void> => {
+	if (config.node_env === "development") {
+		console.log(`[dev] Account restore OTP for ${to}: ${otp}`);
+	}
+
+	await send(
+		to,
+		"Restore Your SafePath Account",
+		[
+			`Hi ${name},`,
+			"",
+			"We received a request to restore your SafePath account.",
+			"",
+			`Your verification code is: ${otp}`,
+			"",
+			`This code expires in ${expiresInMinutes} minutes.`,
+			"",
+			"If you did not request this, you can safely ignore this email.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
 export const sendPasswordChangedEmail = async ({
 	to,
 	name,
@@ -117,7 +146,8 @@ export const sendPasswordChangedEmail = async ({
 export const sendAccountDeletionApprovedEmail = async ({
 	to,
 	name,
-}: Email): Promise<void> => {
+	restoreDeadline,
+}: Email & { restoreDeadline?: Date }): Promise<void> => {
 	await send(
 		to,
 		"Your SafePath Account Has Been Deleted",
@@ -127,6 +157,12 @@ export const sendAccountDeletionApprovedEmail = async ({
 			"Your account deletion request has been approved. Your SafePath profile has been deleted.",
 			"",
 			"You will no longer be able to sign in with this account.",
+			...(restoreDeadline
+				? [
+						"",
+						`You can restore this account until ${restoreDeadline.toUTCString()} using the account restore option.`,
+					]
+				: []),
 			"If you believe this was a mistake, please contact support.",
 			"",
 			signature,

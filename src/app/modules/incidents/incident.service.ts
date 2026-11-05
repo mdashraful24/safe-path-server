@@ -11,6 +11,7 @@ import { getPagination } from "../../utils/pagination";
 import type {
 	ICreateIncidentPayload,
 	IIncidentListQuery,
+	IncidentSortField,
 	IReviewIncidentPayload,
 } from "./incident.interface";
 
@@ -101,17 +102,30 @@ const buildIncidentWhere = (
 		where.area = { contains: query.area, mode: "insensitive" };
 	}
 
-	if (query.search) {
+	const search = query.searchTerm ?? query.search;
+
+	if (search) {
 		where.OR = [
-			{ title: { contains: query.search, mode: "insensitive" } },
-			{ description: { contains: query.search, mode: "insensitive" } },
-			{ area: { contains: query.search, mode: "insensitive" } },
-			{ location: { contains: query.search, mode: "insensitive" } },
+			{ title: { contains: search, mode: "insensitive" } },
+			{ description: { contains: search, mode: "insensitive" } },
+			{ area: { contains: search, mode: "insensitive" } },
+			{ location: { contains: search, mode: "insensitive" } },
 		];
 	}
 
 	return where;
 };
+
+const buildIncidentOrderBy = (
+	query: IIncidentListQuery,
+	defaultSortBy: IncidentSortField,
+) =>
+	[
+		{
+			[query.sortBy ?? defaultSortBy]: query.sortOrder ?? "desc",
+		},
+		{ id: "asc" },
+	] as Prisma.IncidentOrderByWithRelationInput[];
 
 const listPublicIncidents = async (query: IIncidentListQuery) => {
 	const { page, limit, skip } = getPagination(query.page, query.limit);
@@ -121,7 +135,7 @@ const listPublicIncidents = async (query: IIncidentListQuery) => {
 		prisma.incident.findMany({
 			where,
 			select: publicIncidentSelect,
-			orderBy: { incidentDate: "desc" },
+			orderBy: buildIncidentOrderBy(query, "incidentDate"),
 			skip,
 			take: limit,
 		}),
@@ -163,7 +177,7 @@ const listMyIncidents = async (
 		prisma.incident.findMany({
 			where,
 			select: ownIncidentSelect,
-			orderBy: { createdAt: "desc" },
+			orderBy: buildIncidentOrderBy(query, "createdAt"),
 			skip,
 			take: limit,
 		}),
@@ -246,7 +260,7 @@ const listIncidentsForAdmin = async (query: IIncidentListQuery) => {
 		prisma.incident.findMany({
 			where,
 			select: adminIncidentSelect,
-			orderBy: { createdAt: "desc" },
+			orderBy: buildIncidentOrderBy(query, "createdAt"),
 			skip,
 			take: limit,
 		}),

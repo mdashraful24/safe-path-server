@@ -3,6 +3,7 @@ import type { Role } from "../../../generated/prisma/enums";
 import config from "../config";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { isAccountUnavailable } from "../utils/accountLifecycle";
 import { catchAsync } from "../utils/catchAsync";
 import { jwtUtils } from "../utils/jwt";
 
@@ -69,7 +70,7 @@ export const requireAuth = catchAsync(async (req, _res, next) => {
 		},
 	});
 
-	if (!user || user.isDeleted || user.status === "DELETED") {
+	if (!user || isAccountUnavailable(user)) {
 		throw new AppError(
 			httpStatus.UNAUTHORIZED,
 			"This account is no longer available.",

@@ -55,13 +55,13 @@ export const deleteUnverifiedUsers = async () => {
 					);
 				}
 			} catch (error) {
-				console.error(
+				logger.error(
 					"Cron Job: Error while deleting unverified users:",
 					error,
 				);
 			}
 
-			console.log("User delete cron schedule (every 30 minutes)");
+			logger.info("User delete cron schedule (every 30 minutes)");
 		},
 		{ timezone: "Asia/Dhaka" },
 	);

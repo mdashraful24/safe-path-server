@@ -194,6 +194,27 @@ export const sendAccountDeletionRejectedEmail = async ({
 	);
 };
 
+export const sendAccountRestoredEmail = async ({
+	to,
+	name,
+}: Email): Promise<void> => {
+	await send(
+		to,
+		"Your SafePath Account Has Been Restored",
+		[
+			`Hi ${name},`,
+			"",
+			"Your SafePath account has been restored successfully.",
+			"",
+			"You can now sign in and use your account again.",
+			"",
+			"If you did not request this restoration, change your password immediately and contact support.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
 export const sendAdminChangeRequestEmail = async ({
 	to,
 	name,

@@ -18,6 +18,7 @@ import {
 import {
 	sendAccountDeletionApprovedEmail,
 	sendAccountDeletionRejectedEmail,
+	sendAccountRestoredEmail,
 	sendAdminChangeRequestEmail,
 } from "../../utils/email";
 import { getPagination } from "../../utils/pagination";
@@ -356,6 +357,7 @@ const restoreDeletedAccount = async (
 		where: { id: userId },
 		select: {
 			id: true,
+			name: true,
 			email: true,
 			role: true,
 			status: true,
@@ -422,6 +424,15 @@ const restoreDeletedAccount = async (
 			},
 		}),
 	]);
+
+	try {
+		await sendAccountRestoredEmail({
+			to: restoredUser.email,
+			name: restoredUser.name,
+		});
+	} catch (error) {
+		logger.error("Failed to send account restored email:", error);
+	}
 
 	return restoredUser;
 };

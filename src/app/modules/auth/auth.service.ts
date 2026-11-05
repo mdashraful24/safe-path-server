@@ -17,6 +17,7 @@ import {
 } from "../../utils/accountLifecycle";
 import {
 	sendAccountRestoreOtpEmail,
+	sendAccountRestoredEmail,
 	sendPasswordChangedEmail,
 	sendPasswordResetOtpEmail,
 	sendRegistrationOtpEmail,
@@ -514,6 +515,15 @@ const verifyAccountRestore = async (payload: IVerifyAccountRestorePayload) => {
 	});
 
 	await redisClient.del(key);
+
+	try {
+		await sendAccountRestoredEmail({
+			to: restoredUser.email,
+			name: restoredUser.name,
+		});
+	} catch (error) {
+		logger.error("Failed to send account restored email:", error);
+	}
 
 	return {
 		user: restoredUser,

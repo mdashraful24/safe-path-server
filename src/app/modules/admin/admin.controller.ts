@@ -10,13 +10,18 @@ import type {
 import { AdminService } from "./admin.service";
 
 const listUsers = catchAsync(async (req, res) => {
-	const users = await AdminService.listUsers(currentUser(req).role);
+	const result = await AdminService.listUsers(
+		currentUser(req).role,
+		req.query.page,
+		req.query.limit,
+	);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
 		message: "Users fetched successfully.",
-		data: users,
+		data: result.data,
+		meta: result.meta,
 	});
 });
 
@@ -54,15 +59,18 @@ const updateUserStatus = catchAsync(async (req, res) => {
 });
 
 const getDeletionRequests = catchAsync(async (req, res) => {
-	const requests = await AdminService.getDeletionRequests(
+	const result = await AdminService.getDeletionRequests(
 		currentUser(req).role,
+		req.query.page,
+		req.query.limit,
 	);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
 		message: "Account deletion requests fetched successfully.",
-		data: requests,
+		data: result.data,
+		meta: result.meta,
 	});
 });
 

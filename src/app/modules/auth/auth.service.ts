@@ -320,7 +320,8 @@ const forgotPassword = async (payload: IForgotPasswordPayload) => {
 		user &&
 		!user.isDeleted &&
 		user.status === UserStatus.ACTIVE &&
-		user.emailVerified
+		user.emailVerified &&
+		user.role !== Role.ADMIN
 	) {
 		const otp = randomInt(100000, 1000000).toString();
 		const key = `forgot-password:${email}`;
@@ -358,7 +359,12 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 
 	const user = await prisma.user.findUnique({ where: { email } });
 
-	if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
+	if (
+		!user ||
+		user.isDeleted ||
+		user.status !== UserStatus.ACTIVE ||
+		user.role === Role.ADMIN
+	) {
 		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
 	}
 

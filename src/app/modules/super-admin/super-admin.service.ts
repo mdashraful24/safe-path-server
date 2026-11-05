@@ -13,45 +13,41 @@ import {
 	sendAdminChangeRequestRejectedEmail,
 	sendPasswordChangedEmail,
 } from "../../utils/email";
-import { hashPassword } from "../../utils/password";
-import { AdminService } from "../admin/admin.service";
-import type {
-	IUpdateEmailPayload,
-	IUpdatePasswordPayload,
-	IUpdateUserRolePayload,
-	IUpdateUserStatusPayload,
-} from "./super-admin.interface";
+import { getPagination } from "../../utils/pagination";
+import type { IUpdateUserRolePayload } from "./super-admin.interface";
 
-const listUsers = async () => {
-	return AdminService.listUsers(Role.SUPER_ADMIN);
-};
-
-const listAdmins = async () => {
-	return prisma.user.findMany({
-		where: {
-			role: { in: [Role.ADMIN, Role.SUPER_ADMIN] },
-			isDeleted: false,
-		},
-		orderBy: { createdAt: "desc" },
-		omit: { passwordHash: true },
-	});
-};
-
-const getUserDetails = async (requesterId: string, userId: string) => {
-	return AdminService.getUserDetails(Role.SUPER_ADMIN, requesterId, userId);
-};
-
-const updateUserStatus = async (
+const listAdmins = async (
 	requesterId: string,
-	userId: string,
-	payload: IUpdateUserStatusPayload,
+	pageValue: unknown,
+	limitValue: unknown,
 ) => {
-	return AdminService.updateUserStatus(
-		Role.SUPER_ADMIN,
-		requesterId,
-		userId,
-		payload,
-	);
+	const where = {
+		id: { not: requesterId },
+		role: { in: [Role.ADMIN, Role.SUPER_ADMIN] },
+		isDeleted: false,
+	};
+	const { page, limit, skip } = getPagination(pageValue, limitValue);
+
+	const [admins, totalAdmins] = await Promise.all([
+		prisma.user.findMany({
+			where,
+			orderBy: { createdAt: "desc" },
+			skip,
+			take: limit,
+			omit: { passwordHash: true },
+		}),
+		prisma.user.count({ where }),
+	]);
+
+	return {
+		data: admins,
+		meta: {
+			page,
+			limit,
+			total: totalAdmins,
+			totalPages: Math.ceil(totalAdmins / limit),
+		},
+	};
 };
 
 const updateUserRole = async (
@@ -105,108 +101,41 @@ const updateUserRole = async (
 	});
 };
 
-const updateUserEmail = async (
-	userId: string,
-	payload: IUpdateEmailPayload,
-) => {
-	const user = await prisma.user.findUnique({
-		where: { id: userId },
-		select: { id: true, isDeleted: true, status: true },
-	});
+const getChangeRequests = async (pageValue: unknown, limitValue: unknown) => {
+	const where = { status: AdminChangeRequestStatus.PENDING };
+	const { page, limit, skip } = getPagination(pageValue, limitValue);
 
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
-		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
-	}
+	const [requests, totalChangeRequests] = await Promise.all([
+		prisma.adminChangeRequest.findMany({
+			where,
+			orderBy: { createdAt: "asc" },
+			skip,
+			take: limit,
+			select: {
+				id: true,
+				type: true,
+				reason: true,
+				requestedEmail: true,
+				status: true,
+				createdAt: true,
+				requester: { select: { id: true, name: true, email: true } },
+				targetUser: {
+					select: { id: true, name: true, email: true, role: true },
+				},
+			},
+		}),
+		prisma.adminChangeRequest.count({ where }),
+	]);
 
-	const emailOwner = await prisma.user.findUnique({
-		where: { email: payload.email },
-		select: { id: true },
-	});
-
-	if (emailOwner && emailOwner.id !== user.id) {
-		throw new AppError(
-			httpStatus.CONFLICT,
-			"User with this email already exists.",
-		);
-	}
-
-	return prisma.user.update({
-		where: { id: user.id },
-		data: {
-			email: payload.email,
-			emailVerified: true,
-			emailVerifiedAt: new Date(),
-			tokenVersion: { increment: 1 },
+	return {
+		data: requests,
+		meta: {
+			page,
+			limit,
+			total: totalChangeRequests,
+			totalPages: Math.ceil(totalChangeRequests / limit),
 		},
-		omit: { passwordHash: true },
-	});
-};
-
-const updateUserPassword = async (
-	userId: string,
-	payload: IUpdatePasswordPayload,
-) => {
-	const user = await prisma.user.findUnique({
-		where: { id: userId },
-		select: {
-			id: true,
-			name: true,
-			email: true,
-			isDeleted: true,
-			status: true,
-		},
-	});
-
-	if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
-		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
-	}
-
-	const passwordHash = await hashPassword(payload.newPassword);
-
-	await prisma.user.update({
-		where: { id: user.id },
-		data: {
-			passwordHash,
-			tokenVersion: { increment: 1 },
-		},
-	});
-
-	try {
-		await sendPasswordChangedEmail({ to: user.email, name: user.name });
-	} catch (error) {
-		logger.error("Failed to send password changed email:", error);
-	}
-
-	return { id: user.id, email: user.email };
-};
-
-const getDeletionRequests = async () => {
-	return AdminService.getDeletionRequests(Role.SUPER_ADMIN);
-};
-
-const approveAccountDeletion = async (userId: string) => {
-	return AdminService.approveAccountDeletion(Role.SUPER_ADMIN, userId);
-};
-
-const rejectAccountDeletion = async (userId: string, reason: string) => {
-	return AdminService.rejectAccountDeletion(Role.SUPER_ADMIN, userId, reason);
-};
-
-const getChangeRequests = async () => {
-	return prisma.adminChangeRequest.findMany({
-		where: { status: AdminChangeRequestStatus.PENDING },
-		orderBy: { createdAt: "asc" },
-		select: {
-			id: true,
-			type: true,
-			reason: true,
-			requestedEmail: true,
-			status: true,
-			createdAt: true,
-			requester: { select: { id: true, name: true, email: true } },
-			targetUser: { select: { id: true, name: true, email: true, role: true } },
-		},
-	});
+	};
 };
 
 const approveChangeRequest = async (requesterId: string, requestId: string) => {
@@ -307,16 +236,16 @@ const approveChangeRequest = async (requesterId: string, requestId: string) => {
 		} catch (error) {
 			logger.error("Failed to send password changed email:", error);
 		}
-	}
-
-	try {
-		await sendAdminChangeRequestApprovedEmail({
-			to: request.requester.email,
-			name: request.requester.name,
-			type: request.type,
-		});
-	} catch (error) {
-		logger.error("Failed to send admin change approval email:", error);
+	} else {
+		try {
+			await sendAdminChangeRequestApprovedEmail({
+				to: request.requestedEmail as string,
+				name: request.requester.name,
+				type: request.type,
+			});
+		} catch (error) {
+			logger.error("Failed to send admin change approval email:", error);
+		}
 	}
 
 	return {
@@ -375,16 +304,8 @@ const rejectChangeRequest = async (
 };
 
 export const SuperAdminService = {
-	listUsers,
 	listAdmins,
-	getUserDetails,
-	updateUserStatus,
 	updateUserRole,
-	updateUserEmail,
-	updateUserPassword,
-	getDeletionRequests,
-	approveAccountDeletion,
-	rejectAccountDeletion,
 	getChangeRequests,
 	approveChangeRequest,
 	rejectChangeRequest,

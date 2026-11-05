@@ -36,17 +36,19 @@ export const adminValidation = {
 	}),
 
 	createChangeRequest: z.discriminatedUnion("type", [
-		z.object({
-			targetUserId: z.string().uuid("Target user ID must be a valid UUID."),
-			type: z.literal("EMAIL"),
-			reason: reasonSchema,
-			requestedEmail: emailSchema,
-		}),
-		z.object({
-			targetUserId: z.string().uuid("Target user ID must be a valid UUID."),
-			type: z.literal("PASSWORD"),
-			reason: reasonSchema,
-			newPassword: passwordSchema,
-		}),
+		z
+			.object({
+				type: z.literal("EMAIL"),
+				reason: reasonSchema,
+				requestedEmail: emailSchema,
+			})
+			.strict(),
+		z
+			.object({
+				type: z.literal("PASSWORD"),
+				reason: reasonSchema,
+				newPassword: passwordSchema,
+			})
+			.strict(),
 	]),
 };

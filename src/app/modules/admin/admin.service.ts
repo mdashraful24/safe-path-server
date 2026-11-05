@@ -13,18 +13,41 @@ import {
 	sendAccountDeletionRejectedEmail,
 	sendAdminChangeRequestEmail,
 } from "../../utils/email";
+import { getPagination } from "../../utils/pagination";
 import { hashPassword } from "../../utils/password";
 import type {
 	IAdminChangeRequestPayload,
 	IUpdateUserStatusPayload,
 } from "./admin.interface";
 
-const listUsers = async (requesterRole: Role) => {
-	return prisma.user.findMany({
-		where: requesterRole === Role.SUPER_ADMIN ? {} : { role: Role.USER },
-		orderBy: { createdAt: "desc" },
-		omit: { passwordHash: true },
-	});
+const listUsers = async (
+	requesterRole: Role,
+	pageValue: unknown,
+	limitValue: unknown,
+) => {
+	const where = requesterRole === Role.SUPER_ADMIN ? {} : { role: Role.USER };
+	const { page, limit, skip } = getPagination(pageValue, limitValue);
+
+	const [users, totalUsers] = await Promise.all([
+		prisma.user.findMany({
+			where,
+			orderBy: { createdAt: "desc" },
+			skip,
+			take: limit,
+			omit: { passwordHash: true },
+		}),
+		prisma.user.count({ where }),
+	]);
+
+	return {
+		data: users,
+		meta: {
+			page,
+			limit,
+			total: totalUsers,
+			totalPages: Math.ceil(totalUsers / limit),
+		},
+	};
 };
 
 const getUserDetails = async (
@@ -95,24 +118,46 @@ const updateUserStatus = async (
 	});
 };
 
-const getDeletionRequests = async (requesterRole: Role) => {
-	return prisma.user.findMany({
-		where: {
-			status: UserStatus.PENDING_DELETION,
-			...(requesterRole === Role.SUPER_ADMIN ? {} : { role: Role.USER }),
+const getDeletionRequests = async (
+	requesterRole: Role,
+	pageValue: unknown,
+	limitValue: unknown,
+) => {
+	const where = {
+		status: UserStatus.PENDING_DELETION,
+		...(requesterRole === Role.SUPER_ADMIN ? {} : { role: Role.USER }),
+	};
+	const { page, limit, skip } = getPagination(pageValue, limitValue);
+
+	const [requests, totalDeletionRequests] = await Promise.all([
+		prisma.user.findMany({
+			where,
+			orderBy: { deletionRequestedAt: "asc" },
+			skip,
+			take: limit,
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				role: true,
+				imageUrl: true,
+				deletionRequestedAt: true,
+				deletionRequestReason: true,
+				createdAt: true,
+			},
+		}),
+		prisma.user.count({ where }),
+	]);
+
+	return {
+		data: requests,
+		meta: {
+			page,
+			limit,
+			total: totalDeletionRequests,
+			totalPages: Math.ceil(totalDeletionRequests / limit),
 		},
-		orderBy: { deletionRequestedAt: "asc" },
-		select: {
-			id: true,
-			name: true,
-			email: true,
-			role: true,
-			imageUrl: true,
-			deletionRequestedAt: true,
-			deletionRequestReason: true,
-			createdAt: true,
-		},
-	});
+	};
 };
 
 const approveAccountDeletion = async (requesterRole: Role, userId: string) => {
@@ -211,37 +256,33 @@ const createChangeRequest = async (
 	requesterRole: Role,
 	payload: IAdminChangeRequestPayload,
 ) => {
-	const [requester, target] = await Promise.all([
-		prisma.user.findUnique({
-			where: { id: requesterId },
-			select: { name: true, email: true },
-		}),
-		prisma.user.findUnique({
-			where: { id: payload.targetUserId },
-			select: {
-				id: true,
-				name: true,
-				email: true,
-				role: true,
-				status: true,
-				isDeleted: true,
-			},
-		}),
-	]);
-
-	if (!target || target.isDeleted || target.status === UserStatus.DELETED) {
-		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
+	if (requesterRole !== Role.ADMIN) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Only admins can submit email or password change requests.",
+		);
 	}
 
+	const requester = await prisma.user.findUnique({
+		where: { id: requesterId },
+		select: {
+			id: true,
+			name: true,
+			email: true,
+			status: true,
+			isDeleted: true,
+		},
+	});
+
 	if (
-		requesterRole !== Role.SUPER_ADMIN &&
-		target.id !== requesterId &&
-		target.role !== Role.USER
+		!requester ||
+		requester.isDeleted ||
+		requester.status === UserStatus.DELETED
 	) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
 	}
 
-	if (target.status === UserStatus.PENDING_DELETION) {
+	if (requester.status === UserStatus.PENDING_DELETION) {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
 			"Resolve the pending account deletion request first.",
@@ -259,7 +300,7 @@ const createChangeRequest = async (
 			select: { id: true },
 		});
 
-		if (emailOwner && emailOwner.id !== target.id) {
+		if (emailOwner && emailOwner.id !== requester.id) {
 			throw new AppError(
 				httpStatus.CONFLICT,
 				"User with this email already exists.",
@@ -272,7 +313,7 @@ const createChangeRequest = async (
 	const request = await prisma.adminChangeRequest.create({
 		data: {
 			requesterId,
-			targetUserId: target.id,
+			targetUserId: requester.id,
 			type:
 				payload.type === "EMAIL"
 					? AdminChangeRequestType.EMAIL
@@ -304,10 +345,10 @@ const createChangeRequest = async (
 			await sendAdminChangeRequestEmail({
 				to: superAdmin.email,
 				name: superAdmin.name,
-				requesterName: requester?.name ?? "Admin",
-				requesterEmail: requester?.email ?? "",
-				targetName: target.name,
-				targetEmail: target.email,
+				requesterName: requester.name,
+				requesterEmail: requester.email,
+				targetName: requester.name,
+				targetEmail: requester.email,
 				type: payload.type,
 				reason: payload.reason,
 				requestedEmail,

@@ -1,8 +1,9 @@
 import httpStatus from "http-status";
-import { UserStatus } from "../../../../generated/prisma/enums";
+import { Role, UserStatus } from "../../../../generated/prisma/enums";
 import { cloudinary, deleteCloudinaryImage } from "../../lib/cloudinary";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
+import { hashPassword, verifyPassword } from "../../utils/password";
 import type {
 	IRequestAccountDeletionPayload,
 	IUpdateProfilePayload,
@@ -55,7 +56,13 @@ const updateProfile = async (
 ) => {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { id: true, imagePublicId: true },
+		select: {
+			id: true,
+			email: true,
+			passwordHash: true,
+			role: true,
+			imagePublicId: true,
+		},
 	});
 
 	if (!user) {
@@ -64,12 +71,72 @@ const updateProfile = async (
 
 	const data: {
 		name?: string;
+		email?: string;
+		emailVerified?: boolean;
+		emailVerifiedAt?: Date;
+		passwordHash?: string;
 		imageUrl?: string;
 		imagePublicId?: string;
 	} = {};
 
 	if (payload.name) {
 		data.name = payload.name;
+	}
+
+	const updatesCredentials = Boolean(payload.email || payload.newPassword);
+
+	if (updatesCredentials) {
+		if (user.role !== Role.USER && user.role !== Role.SUPER_ADMIN) {
+			throw new AppError(
+				httpStatus.FORBIDDEN,
+				"Admins must submit an email or password change request to a super admin.",
+			);
+		}
+
+		if (!payload.currentPassword) {
+			throw new AppError(
+				httpStatus.BAD_REQUEST,
+				"Current password is required to change your email or password.",
+			);
+		}
+
+		const isPasswordMatched = await verifyPassword(
+			payload.currentPassword,
+			user.passwordHash,
+		);
+
+		if (!isPasswordMatched) {
+			throw new AppError(
+				httpStatus.UNAUTHORIZED,
+				"Current password is incorrect.",
+			);
+		}
+	}
+
+	if (payload.email) {
+		const email = payload.email.trim().toLowerCase();
+
+		if (email !== user.email) {
+			const emailOwner = await prisma.user.findUnique({
+				where: { email },
+				select: { id: true },
+			});
+
+			if (emailOwner) {
+				throw new AppError(
+					httpStatus.CONFLICT,
+					"User with this email already exists.",
+				);
+			}
+
+			data.email = email;
+			data.emailVerified = true;
+			data.emailVerifiedAt = new Date();
+		}
+	}
+
+	if (payload.newPassword) {
+		data.passwordHash = await hashPassword(payload.newPassword);
 	}
 
 	const uploadedImage = file ? await uploadProfileImage(file) : null;
@@ -82,7 +149,7 @@ const updateProfile = async (
 	if (Object.keys(data).length === 0) {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
-			"Provide a name or profile picture to update.",
+			"Provide a name, email, password, or profile picture to update.",
 		);
 	}
 

@@ -4,13 +4,11 @@ export interface IUpdateUserStatusPayload {
 
 export type IAdminChangeRequestPayload =
 	| {
-			targetUserId: string;
 			type: "EMAIL";
 			reason: string;
 			requestedEmail: string;
 	  }
 	| {
-			targetUserId: string;
 			type: "PASSWORD";
 			reason: string;
 			newPassword: string;

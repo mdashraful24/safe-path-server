@@ -8,6 +8,7 @@ import { userValidation } from "./user.validation";
 const router = Router();
 
 router.get("/me", requireAuth, UserController.getProfile);
+
 router.patch(
 	"/me",
 	requireAuth,
@@ -15,7 +16,9 @@ router.patch(
 	validateRequest(userValidation.updateProfile),
 	UserController.updateProfile,
 );
+
 router.delete("/me/avatar", requireAuth, UserController.removeProfileImage);
+
 router.delete(
 	"/me",
 	requireAuth,

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { upload } from "../../lib/multer";
 import { requireAdmin, requireAuth } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { IncidentController } from "../incidents/incident.controller";
@@ -42,6 +43,16 @@ router.post(
 
 router.get("/incidents", IncidentController.listIncidentsForAdmin);
 router.get("/incidents/:incidentId", IncidentController.getIncidentForAdmin);
+router.patch(
+	"/incidents/:incidentId",
+	upload.single("image"),
+	validateRequest(incidentValidation.update),
+	IncidentController.updateIncidentForAdmin,
+);
+router.delete(
+	"/incidents/:incidentId",
+	IncidentController.deleteIncidentForAdmin,
+);
 router.patch(
 	"/incidents/:incidentId/review",
 	validateRequest(incidentValidation.review),

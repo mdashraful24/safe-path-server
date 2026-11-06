@@ -138,6 +138,35 @@ const getIncidentForAdmin = catchAsync(async (req, res) => {
 	});
 });
 
+const updateIncidentForAdmin = catchAsync(async (req, res) => {
+	const incident = await IncidentService.updateIncidentForAdmin(
+		currentUser(req).id,
+		String(req.params.incidentId),
+		req.body as IUpdateIncidentPayload,
+		req.file,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Incident updated successfully.",
+		data: incident,
+	});
+});
+
+const deleteIncidentForAdmin = catchAsync(async (req, res) => {
+	const result = await IncidentService.deleteIncidentForAdmin(
+		String(req.params.incidentId),
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Incident deleted successfully.",
+		data: result,
+	});
+});
+
 const reviewIncident = catchAsync(async (req, res) => {
 	const incident = await IncidentService.reviewIncident(
 		currentUser(req).id,
@@ -163,5 +192,7 @@ export const IncidentController = {
 	deleteMyIncident,
 	listIncidentsForAdmin,
 	getIncidentForAdmin,
+	updateIncidentForAdmin,
+	deleteIncidentForAdmin,
 	reviewIncident,
 };

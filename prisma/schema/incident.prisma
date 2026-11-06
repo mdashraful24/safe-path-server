@@ -27,7 +27,8 @@ model Incident {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  history IncidentHistory[]
+  history  IncidentHistory[]
+  comments Comment[]
 
   @@index([status])
   @@index([category])

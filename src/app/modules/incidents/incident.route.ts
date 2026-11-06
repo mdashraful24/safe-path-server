@@ -15,17 +15,21 @@ router.post(
 	IncidentController.createIncident,
 );
 router.get("/", IncidentController.listPublicIncidents);
-router.get("/me", requireAuth, IncidentController.listMyIncidents);
-router.get("/me/:incidentId", requireAuth, IncidentController.getMyIncident);
+router.get("/my-incidents", requireAuth, IncidentController.listMyIncidents);
+router.get(
+	"/my-incidents/:incidentId",
+	requireAuth,
+	IncidentController.getMyIncident,
+);
 router.patch(
-	"/me/:incidentId",
+	"/my-incidents/:incidentId",
 	requireAuth,
 	upload.single("image"),
 	validateRequest(incidentValidation.update),
 	IncidentController.updateMyIncident,
 );
 router.delete(
-	"/me/:incidentId",
+	"/my-incidents/:incidentId",
 	requireAuth,
 	IncidentController.deleteMyIncident,
 );

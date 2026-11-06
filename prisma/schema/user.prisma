@@ -41,6 +41,7 @@ model User {
   reportedIncidents Incident[]        @relation("ReportedIncidents")
   reviewedIncidents Incident[]        @relation("ReviewedIncidents")
   incidentChanges   IncidentHistory[] @relation("IncidentChanges")
+  comments          Comment[]         @relation("IncidentComments")
 
   changeRequestsCreated  AdminChangeRequest[] @relation("ChangeRequestsCreated")
   changeRequestsTargeted AdminChangeRequest[] @relation("ChangeRequestsTargeted")

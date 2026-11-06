@@ -383,6 +383,104 @@ const getIncidentForAdmin = async (incidentId: string) => {
 	return incident;
 };
 
+const updateIncidentForAdmin = async (
+	adminId: string,
+	incidentId: string,
+	payload: IUpdateIncidentPayload,
+	file?: Express.Multer.File,
+) => {
+	const existingIncident = await prisma.incident.findUnique({
+		where: { id: incidentId },
+		select: {
+			id: true,
+			status: true,
+			imagePublicId: true,
+		},
+	});
+
+	if (!existingIncident) {
+		throw new AppError(httpStatus.NOT_FOUND, "Incident not found.");
+	}
+
+	if (Object.keys(payload).length === 0 && !file) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"At least one incident field or image is required.",
+		);
+	}
+
+	const uploadedImage = file ? await uploadIncidentImage(file) : null;
+
+	try {
+		const incident = await prisma.$transaction(async (tx) => {
+			const updated = await tx.incident.update({
+				where: { id: incidentId },
+				data: {
+					...payload,
+					location: payload.location ?? undefined,
+					latitude: payload.latitude ?? undefined,
+					longitude: payload.longitude ?? undefined,
+					...(uploadedImage
+						? {
+								imageUrl: uploadedImage.imageUrl,
+								imagePublicId: uploadedImage.imagePublicId,
+							}
+						: {}),
+				},
+				select: adminIncidentSelect,
+			});
+
+			await tx.incidentHistory.create({
+				data: {
+					incidentId,
+					changedById: adminId,
+					previousStatus: existingIncident.status,
+					newStatus: existingIncident.status,
+					note: "Incident details updated by an administrator.",
+				},
+			});
+
+			return updated;
+		});
+
+		if (uploadedImage && existingIncident.imagePublicId) {
+			await deleteCloudinaryImage(existingIncident.imagePublicId);
+		}
+
+		return incident;
+	} catch (error) {
+		if (uploadedImage) {
+			await deleteCloudinaryImage(uploadedImage.imagePublicId);
+		}
+
+		throw error;
+	}
+};
+
+const deleteIncidentForAdmin = async (incidentId: string) => {
+	const existingIncident = await prisma.incident.findUnique({
+		where: { id: incidentId },
+		select: {
+			id: true,
+			imagePublicId: true,
+		},
+	});
+
+	if (!existingIncident) {
+		throw new AppError(httpStatus.NOT_FOUND, "Incident not found.");
+	}
+
+	await prisma.incident.delete({
+		where: { id: existingIncident.id },
+	});
+
+	if (existingIncident.imagePublicId) {
+		await deleteCloudinaryImage(existingIncident.imagePublicId);
+	}
+
+	return { id: existingIncident.id };
+};
+
 const reviewIncident = async (
 	reviewerId: string,
 	incidentId: string,
@@ -442,5 +540,7 @@ export const IncidentService = {
 	deleteMyIncident,
 	listIncidentsForAdmin,
 	getIncidentForAdmin,
+	updateIncidentForAdmin,
+	deleteIncidentForAdmin,
 	reviewIncident,
 };

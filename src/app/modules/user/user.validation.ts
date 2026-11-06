@@ -14,6 +14,11 @@ const emailSchema = z
 	.toLowerCase()
 	.email("Please provide a valid email address.");
 
+const otpSchema = z
+	.string("Verification code is required.")
+	.trim()
+	.regex(/^\d{6}$/, "Verification code must be a 6-digit number.");
+
 const passwordSchema = z
 	.string("Password must be a string.")
 	.min(8, "Password must be at least 8 characters long.")
@@ -40,15 +45,6 @@ export const userValidation = {
 		.superRefine((data, ctx) => {
 			const updatesCredentials = Boolean(data.email || data.newPassword);
 
-			if (updatesCredentials && !data.currentPassword) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["currentPassword"],
-					message:
-						"Current password is required to change your email or password.",
-				});
-			}
-
 			if (!updatesCredentials && data.currentPassword) {
 				ctx.addIssue({
 					code: "custom",
@@ -58,6 +54,12 @@ export const userValidation = {
 				});
 			}
 		}),
+
+	verifyEmailChange: z
+		.object({
+			otp: otpSchema,
+		})
+		.strict(),
 
 	requestAccountDeletion: z.object({
 		reason: z

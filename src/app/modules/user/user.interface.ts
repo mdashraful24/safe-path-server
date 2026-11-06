@@ -5,6 +5,10 @@ export interface IUpdateProfilePayload {
 	newPassword?: string;
 }
 
+export interface IVerifyEmailChangePayload {
+	otp: string;
+}
+
 export interface IRequestAccountDeletionPayload {
 	reason?: string;
 }

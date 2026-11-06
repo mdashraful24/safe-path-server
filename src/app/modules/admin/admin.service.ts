@@ -455,6 +455,7 @@ const createChangeRequest = async (
 			id: true,
 			name: true,
 			email: true,
+			passwordHash: true,
 			status: true,
 			isDeleted: true,
 		},
@@ -462,6 +463,13 @@ const createChangeRequest = async (
 
 	if (!requester || isAccountUnavailable(requester)) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
+	}
+
+	if (payload.type === "PASSWORD" && !requester.passwordHash) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"This account uses Google sign-in and cannot add a password.",
+		);
 	}
 
 	if (requester.status === UserStatus.PENDING_DELETION) {

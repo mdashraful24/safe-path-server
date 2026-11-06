@@ -248,14 +248,22 @@ export const sendAdminChangeRequestApprovedEmail = async ({
 	to,
 	name,
 	type,
-}: Email & { type: "EMAIL" | "PASSWORD" }): Promise<void> => {
+	pendingVerification = false,
+}: Email & {
+	type: "EMAIL" | "PASSWORD";
+	pendingVerification?: boolean;
+}): Promise<void> => {
+	const statusMessage = pendingVerification
+		? "was approved. A verification code has been sent to the new email address. Your current email remains active until you verify the new address."
+		: "was approved and applied.";
+
 	await send(
 		to,
 		"Admin Change Request Approved - SafePath",
 		[
 			`Hi ${name},`,
 			"",
-			`Your request to change the ${type.toLowerCase()} was approved and applied.`,
+			`Your request to change the ${type.toLowerCase()} ${statusMessage}`,
 			"",
 			signature,
 		].join("\n"),
@@ -277,6 +285,76 @@ export const sendAdminChangeRequestRejectedEmail = async ({
 			`Your request to change the ${type.toLowerCase()} was rejected.`,
 			"",
 			`Reason: ${reason}`,
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendEmailChangeOtpEmail = async ({
+	to,
+	name,
+	otp,
+	expiresInMinutes,
+}: OtpEmail): Promise<void> => {
+	if (config.node_env === "development") {
+		console.log(`[dev] Email change OTP for ${to}: ${otp}`);
+	}
+
+	await send(
+		to,
+		"Verify Your New Email - SafePath",
+		[
+			`Hi ${name},`,
+			"",
+			"We received a request to change the email address for your SafePath account.",
+			"",
+			`Your verification code is: ${otp}`,
+			"",
+			`This code expires in ${expiresInMinutes} minutes.`,
+			"",
+			"If you did not request this change, you can safely ignore this email. Your email will not change.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendEmailChangedEmail = async ({
+	to,
+	name,
+	newEmail,
+}: Email & { newEmail: string }): Promise<void> => {
+	await send(
+		to,
+		"Your SafePath Email Was Changed",
+		[
+			`Hi ${name},`,
+			"",
+			`The email address for your SafePath account was changed to ${newEmail}.`,
+			"",
+			"If you did not make this change, contact support immediately.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendGoogleSignInLinkedEmail = async ({
+	to,
+	name,
+}: Email): Promise<void> => {
+	await send(
+		to,
+		"Google Sign-In Linked - SafePath",
+		[
+			`Hi ${name},`,
+			"",
+			"Your Google account has been linked to your existing SafePath account.",
+			"",
+			"You can now sign in with either Google or your SafePath password.",
+			"",
+			"If you did not make this change, reset your password immediately and contact support.",
 			"",
 			signature,
 		].join("\n"),

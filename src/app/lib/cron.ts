@@ -3,14 +3,15 @@ import cron from "node-cron";
 import {
 	AccountLifecycleEventType,
 	AdminChangeRequestStatus,
+	AuthProvider,
 	Role,
 	UserStatus,
 } from "../../../generated/prisma/enums";
+import logger from "../logger";
 import { getAccountLifecyclePolicy } from "../utils/accountLifecycle";
 import { hashPassword } from "../utils/password";
 import { deleteCloudinaryImage } from "./cloudinary";
 import { prisma } from "./prisma";
-import logger from "../logger";
 
 const ANONYMIZED_EMAIL_DOMAIN = "deleted.safepath.local";
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -55,10 +56,7 @@ export const deleteUnverifiedUsers = async () => {
 					);
 				}
 			} catch (error) {
-				logger.error(
-					"Cron Job: Error while deleting unverified users:",
-					error,
-				);
+				console.error("Cron Job: Error while deleting unverified users:", error);
 			}
 
 			logger.info("User delete cron schedule (every 30 minutes)");
@@ -116,6 +114,8 @@ export const purgeExpiredAccounts = async () => {
 								name: "Deleted User",
 								email: getAnonymizedEmail(user.id),
 								passwordHash,
+								googleId: null,
+								authProvider: AuthProvider.CREDENTIAL,
 								emailVerified: false,
 								emailVerifiedAt: null,
 								imageUrl: null,

@@ -23,6 +23,7 @@ requests.
 ## Key Features
 
 - User registration, email verification, login, logout, and token refresh
+- Google sign-in with verified ID tokens and automatic account linking
 - Password reset and account restore flows
 - Role-based access for users, admins, and super admins
 - Public listing and details for approved incidents only
@@ -42,7 +43,7 @@ requests.
 
 - `express`, `cors`, `helmet`, `compression`, `cookie-parser`
 - `@prisma/client`, `@prisma/adapter-pg`, `pg`
-- `jsonwebtoken`, `bcryptjs`
+- `jsonwebtoken`, `bcryptjs`, `google-auth-library`
 - `zod`, `http-status`
 - `multer`, `cloudinary`
 - `redis`, `node-cron`
@@ -81,8 +82,12 @@ Create a local environment file:
 copy .env.example .env
 ```
 
-Update `.env` with your PostgreSQL, Redis, JWT, Cloudinary, SMTP, and seed
-configuration values. Never commit the `.env` file or real credentials.
+Update `.env` with your PostgreSQL, Redis, JWT, Google, Cloudinary, SMTP, and
+seed configuration values. Never commit the `.env` file or real credentials.
+
+For Google sign-in, set `GOOGLE_CLIENT_ID` to the same Web Client ID used by the
+frontend. The API verifies Google ID tokens against this audience; no client
+secret is required.
 
 ### Database Setup
 
@@ -132,14 +137,55 @@ bun run db:studio
 
 ## API Overview
 
-| Area | Base path |
-| --- | --- |
-| Authentication | `/api/v1/auth` |
-| Users | `/api/v1/users` |
-| Incidents | `/api/v1/incidents` |
-| Dashboard | `/api/v1/dashboard` |
-| Admin | `/api/v1/admin` |
-| Super admin | `/api/v1/super-admin` |
+| Area           | Base path             |
+| -------------- | --------------------- |
+| Authentication | `/api/v1/auth`        |
+| Users          | `/api/v1/users`       |
+| Incidents      | `/api/v1/incidents`   |
+| Dashboard      | `/api/v1/dashboard`   |
+| Admin          | `/api/v1/admin`       |
+| Super admin    | `/api/v1/super-admin` |
+
+Google sign-in accepts a Google ID token from the frontend:
+
+```text
+POST /api/v1/auth/google
+{ "idToken": "<google-id-token>" }
+```
+
+Google sign-in is available only for normal user accounts. Admin and super
+admin accounts cannot sign in with Google.
+
+The token must have a verified email. An existing verified password user account
+with the same email is linked automatically, and both Google and password login
+remain available. If no account exists, a Google-only user account is created.
+If the email belongs to an admin or super admin account, Google sign-in is
+rejected.
+
+Google-only accounts cannot add email/password credentials or use password
+login, password reset, or credential registration with the same email. Google
+sign-in remains the only login method for those accounts. Google-only accounts
+cannot be promoted to admin or super admin because Google sign-in is restricted
+to normal user accounts and the account has no password.
+
+Email changes require verification of the new address. Send the change request
+through the authenticated profile endpoint, then verify the OTP sent to the new
+email:
+
+```text
+PATCH /api/v1/users/me
+{ "email": "new@example.com", "currentPassword": "<current-password>" }
+
+POST /api/v1/users/me/email/verify
+{ "otp": "<6-digit-code>" }
+```
+
+For administrator email changes, super admin approval sends the verification OTP
+to the requested new address. The administrator verifies it through the same
+`/users/me/email/verify` endpoint; the current email remains active until then.
+
+The old email remains active until verification succeeds. After verification,
+all sessions are invalidated and the user must log in with the new email.
 
 Public incident endpoints return approved incidents only:
 
@@ -166,4 +212,4 @@ comment through `/api/v1/admin/incidents/:incidentId/comments/:commentId`.
 - Live API: No deployed URL is configured in this repository.
 - Local API health check: http://localhost:5000/health
 - Postman collection: [SafePath Backend Collection](./postman/SafePath.postman_collection.json)
-- Postman collection link: https://documenter.getpostman.com/view/59636503/2sBYHYtctK
+- Postman collection link: https://documenter.getpostman.com/view/59636503/2sBYHYtdLp

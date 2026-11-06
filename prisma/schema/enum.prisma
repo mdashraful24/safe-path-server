@@ -12,6 +12,11 @@ enum UserStatus {
   PURGED
 }
 
+enum AuthProvider {
+  CREDENTIAL
+  GOOGLE
+}
+
 enum AccountLifecycleEventType {
   DELETION_REQUESTED
   DELETION_APPROVED

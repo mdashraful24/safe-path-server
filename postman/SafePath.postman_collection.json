@@ -1,2089 +1,1727 @@
 {
-  "info": {
-    "_postman_id": "e5f67c00-a508-4e98-ae66-c2735a826ce5",
-    "name": "SafePath (Backend)",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "54687734",
-    "_collection_link": "https://go.postman.co/collection/54687734-e5f67c00-a508-4e98-ae66-c2735a826ce5?source=collection_link"
-  },
-  "item": [
-    {
-      "name": "Auth",
-      "item": [
-        {
-          "name": "Register",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"{{newUserName}}\",\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"{{newUserPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/register",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "register"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Verify Email",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"otp\": \"{{registrationOtp}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/verify-email",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "verify-email"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Resend OTP",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/resend-otp",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "resend-otp"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"{{newUserPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/login",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "login"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Refresh Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/refresh-token",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "refresh-token"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Me",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{authUrl}}/me",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "me"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Logout",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/logout",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "logout"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Forgot Password",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/forgot-password",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "forgot-password"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Resend Forgot Password OTP",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/resend-forgot-password-otp",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "resend-forgot-password-otp"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Reset Password",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"otp\": \"{{forgotPasswordOtp}}\",\n  \"newPassword\": \"{{newUserPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/reset-password",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "reset-password"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Request Account Restore",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/restore/request",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "restore",
-                "request"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Verify Account Restore",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"otp\": \"{{restoreOtp}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{authUrl}}/restore/verify",
-              "host": [
-                "{{authUrl}}"
-              ],
-              "path": [
-                "restore",
-                "verify"
-              ]
-            }
-          },
-          "response": []
-        }
-      ],
-      "description": "Authentication and session endpoints for SafePath.\n\nBase URL: `{{authUrl}}` (`{{baseUrl}}{{apiPrefix}}/auth`).\n\nDemo sequence:\n1. Register → copy the OTP into `registrationOtp` → Verify Email\n2. Login - Demo User → Get Me → Refresh Token → Logout\n3. Forgot Password → copy OTP into `forgotPasswordOtp` → Reset Password\n4. Request Account Restore → copy OTP into `restoreOtp` → Verify Account Restore\n\nThe seeded accounts require `SEED_ON_START=true`:\n- user@safepath.local / User@12345\n- admin@safepath.local / Admin@12345"
-    },
-    {
-      "name": "Dashboard",
-      "description": "Role-aware dashboard overview. The response changes based on the authenticated account role: USER, ADMIN, or SUPER_ADMIN.\n\nBase URL: `{{dashboardUrl}}` (`{{baseUrl}}{{apiPrefix}}/dashboard`).",
-      "item": [
-        {
-          "name": "Get Dashboard Overview",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{dashboardUrl}}/overview",
-              "host": [
-                "{{dashboardUrl}}"
-              ],
-              "path": [
-                "overview"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "User",
-      "description": "User profile, profile picture, and account deletion request endpoints for SafePath.\n\nBase URL: `{{usersUrl}}` (`{{baseUrl}}{{apiPrefix}}/users`).",
-      "item": [
-        {
-          "name": "Get My Profile",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{usersUrl}}/me",
-              "host": [
-                "{{usersUrl}}"
-              ],
-              "path": [
-                "me"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update My Profile",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "name",
-                  "value": "{{demoUserName}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "updated.user@safepath.local",
-                  "type": "text",
-                  "disabled": true
-                },
-                {
-                  "key": "currentPassword",
-                  "value": "{{demoUserPassword}}",
-                  "type": "text",
-                  "disabled": true
-                },
-                {
-                  "key": "newPassword",
-                  "value": "UpdatedUser@12345",
-                  "type": "text",
-                  "disabled": true
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{usersUrl}}/me",
-              "host": [
-                "{{usersUrl}}"
-              ],
-              "path": [
-                "me"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Remove Profile Picture",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{usersUrl}}/me/avatar",
-              "host": [
-                "{{usersUrl}}"
-              ],
-              "path": [
-                "me",
-                "avatar"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Request Account Deletion",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"I no longer need this account.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{usersUrl}}/me",
-              "host": [
-                "{{usersUrl}}"
-              ],
-              "path": [
-                "me"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Incidents",
-      "description": "Incident reporting and public browsing endpoints.\n\nBase URL: `{{incidentsUrl}}` (`{{baseUrl}}{{apiPrefix}}/incidents`).",
-      "item": [
-        {
-          "name": "Get Approved Incidents",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "if (Array.isArray(body.data) && body.data.length > 0) {",
-                  "  pm.collectionVariables.set(\"incidentId\", body.data[0].id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{incidentsUrl}}?page=1&limit=10",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "area",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "category",
-                  "value": "THEFT",
-                  "disabled": true
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Incident Details",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{incidentsUrl}}/{{incidentId}}",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "{{incidentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get My Incidents",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{incidentsUrl}}/my-incidents?page=1&limit=10",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "my-incidents"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "PENDING",
-                  "disabled": true
-                },
-                {
-                  "key": "area",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "category",
-                  "value": "THEFT",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get My Incident Details",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{incidentsUrl}}/my-incidents/{{incidentId}}",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "my-incidents",
-                "{{incidentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Create Incident",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "if (body.data && body.data.id) pm.collectionVariables.set(\"incidentId\", body.data.id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "title",
-                  "value": "Suspicious activity near campus gate",
-                  "type": "text"
-                },
-                {
-                  "key": "description",
-                  "value": "A person was observed following visitors near the campus gate after sunset.",
-                  "type": "text"
-                },
-                {
-                  "key": "category",
-                  "value": "SUSPICIOUS_ACTIVITY",
-                  "type": "text"
-                },
-                {
-                  "key": "area",
-                  "value": "Campus Gate",
-                  "type": "text"
-                },
-                {
-                  "key": "location",
-                  "value": "Main campus gate, north side",
-                  "type": "text"
-                },
-                {
-                  "key": "latitude",
-                  "value": "23.8103",
-                  "type": "text"
-                },
-                {
-                  "key": "longitude",
-                  "value": "90.4125",
-                  "type": "text"
-                },
-                {
-                  "key": "incidentDate",
-                  "value": "2026-11-05T10:00:00.000Z",
-                  "type": "text"
-                },
-                {
-                  "key": "image",
-                  "type": "file",
-                  "src": [],
-                  "disabled": true
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{incidentsUrl}}",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": []
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update My Incident",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "title",
-                  "value": "Updated suspicious activity near campus gate",
-                  "type": "text"
-                },
-                {
-                  "key": "description",
-                  "value": "Updated details about suspicious activity observed near the campus gate after sunset.",
-                  "type": "text"
-                },
-                {
-                  "key": "category",
-                  "value": "SUSPICIOUS_ACTIVITY",
-                  "type": "text"
-                },
-                {
-                  "key": "area",
-                  "value": "Campus Gate",
-                  "type": "text"
-                },
-                {
-                  "key": "location",
-                  "value": "Main campus gate, north side",
-                  "type": "text"
-                },
-                {
-                  "key": "latitude",
-                  "value": "23.8103",
-                  "type": "text"
-                },
-                {
-                  "key": "longitude",
-                  "value": "90.4125",
-                  "type": "text"
-                },
-                {
-                  "key": "incidentDate",
-                  "value": "2026-11-05T10:00:00.000Z",
-                  "type": "text"
-                },
-                {
-                  "key": "image",
-                  "type": "file",
-                  "src": [],
-                  "disabled": true
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{incidentsUrl}}/my-incidents/{{incidentId}}",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "my-incidents",
-                "{{incidentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete My Incident",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{incidentsUrl}}/my-incidents/{{incidentId}}",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "my-incidents",
-                "{{incidentId}}"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Comments",
-      "description": "Incident comments. Comments are readable on approved incidents. Posting and editing require authentication and are rate limited.",
-      "item": [
-        {
-          "name": "Get Incident Comments",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{incidentsUrl}}/{{incidentId}}/comments?page=1&limit=20",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "{{incidentId}}",
-                "comments"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Create Comment",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": \"Stay safe and avoid this area after dark.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{incidentsUrl}}/{{incidentId}}/comments",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "{{incidentId}}",
-                "comments"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update My Comment",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": \"Updated comment about this incident.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{incidentsUrl}}/{{incidentId}}/comments/{{commentId}}",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "{{incidentId}}",
-                "comments",
-                "{{commentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete My Comment",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{incidentsUrl}}/{{incidentId}}/comments/{{commentId}}",
-              "host": [
-                "{{incidentsUrl}}"
-              ],
-              "path": [
-                "{{incidentId}}",
-                "comments",
-                "{{commentId}}"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Admin",
-      "description": "Administrator user and deletion request endpoints for normal users. Admin credential changes are submitted as requests for a super admin to review.\n\nBase URL: `{{adminUrl}}` (`{{baseUrl}}{{apiPrefix}}/admin`).",
-      "item": [
-        {
-          "name": "Get Users",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/users",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "users"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "role",
-                  "value": "USER",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "ACTIVE",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get User Details",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/users/{{demoUserId}}",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{demoUserId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update User Status",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"BLOCKED\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{adminUrl}}/users/{{demoUserId}}/status",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{demoUserId}}",
-                "status"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Deletion Requests",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/users/deletion-requests",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "users",
-                "deletion-requests"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "role",
-                  "value": "USER",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "deletionRequestedAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "asc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Approve Account Deletion",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/users/deletion-requests/{{deletionRequestUserId}}/approve",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "users",
-                "deletion-requests",
-                "{{deletionRequestUserId}}",
-                "approve"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Reject Account Deletion",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"The account still has unresolved incident reports.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{adminUrl}}/users/deletion-requests/{{deletionRequestUserId}}/reject",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "users",
-                "deletion-requests",
-                "{{deletionRequestUserId}}",
-                "reject"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Restore Deleted Account",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"Restored after verifying the account owner's request.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{adminUrl}}/users/{{deletionRequestUserId}}/restore",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{deletionRequestUserId}}",
-                "restore"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Submit My Change Request",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"EMAIL\",\n  \"reason\": \"My admin email address needs to be updated.\",\n  \"requestedEmail\": \"updated.admin@safepath.local\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{adminUrl}}/change-requests",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "change-requests"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Incidents",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "if (Array.isArray(body.data) && body.data.length > 0) {",
-                  "  pm.collectionVariables.set(\"incidentId\", body.data[0].id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/incidents?page=1&limit=10",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "incidents"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "status",
-                  "value": "PENDING",
-                  "disabled": true
-                },
-                {
-                  "key": "area",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "category",
-                  "value": "THEFT",
-                  "disabled": true
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Incident Details",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/incidents/{{incidentId}}",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "incidents",
-                "{{incidentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Edit Incident",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "title",
-                  "value": "Moderated suspicious activity near campus gate",
-                  "type": "text"
-                },
-                {
-                  "key": "description",
-                  "value": "Moderated incident description for public safety awareness.",
-                  "type": "text"
-                },
-                {
-                  "key": "category",
-                  "value": "SUSPICIOUS_ACTIVITY",
-                  "type": "text"
-                },
-                {
-                  "key": "area",
-                  "value": "Campus Gate",
-                  "type": "text"
-                },
-                {
-                  "key": "location",
-                  "value": "Main campus gate, north side",
-                  "type": "text"
-                },
-                {
-                  "key": "latitude",
-                  "value": "23.8103",
-                  "type": "text"
-                },
-                {
-                  "key": "longitude",
-                  "value": "90.4125",
-                  "type": "text"
-                },
-                {
-                  "key": "incidentDate",
-                  "value": "2026-11-05T10:00:00.000Z",
-                  "type": "text"
-                },
-                {
-                  "key": "image",
-                  "type": "file",
-                  "src": [],
-                  "disabled": true
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{adminUrl}}/incidents/{{incidentId}}",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "incidents",
-                "{{incidentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete Incident",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/incidents/{{incidentId}}",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "incidents",
-                "{{incidentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete Incident Comment",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{adminUrl}}/incidents/{{incidentId}}/comments/{{commentId}}",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "incidents",
-                "{{incidentId}}",
-                "comments",
-                "{{commentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Approve Incident",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"APPROVED\",\n  \"note\": \"Verified by a moderator.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{adminUrl}}/incidents/{{incidentId}}/review",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "incidents",
-                "{{incidentId}}",
-                "review"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Reject Incident",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"REJECTED\",\n  \"note\": \"Insufficient details to verify this report.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{adminUrl}}/incidents/{{incidentId}}/review",
-              "host": [
-                "{{adminUrl}}"
-              ],
-              "path": [
-                "incidents",
-                "{{incidentId}}",
-                "review"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Super Admin",
-      "description": "Super administrator endpoints for managing admins, roles, and admin email/password change requests.\n\nBase URL: `{{superAdminUrl}}` (`{{baseUrl}}{{apiPrefix}}/super-admin`).",
-      "item": [
-        {
-          "name": "Get Admins",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{superAdminUrl}}/admins",
-              "host": [
-                "{{superAdminUrl}}"
-              ],
-              "path": [
-                "admins"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "role",
-                  "value": "ADMIN",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "ACTIVE",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update User Role",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"ADMIN\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{superAdminUrl}}/users/{{demoUserId}}/role",
-              "host": [
-                "{{superAdminUrl}}"
-              ],
-              "path": [
-                "users",
-                "{{demoUserId}}",
-                "role"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Change Requests",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{superAdminUrl}}/change-requests",
-              "host": [
-                "{{superAdminUrl}}"
-              ],
-              "path": [
-                "change-requests"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "searchTerm",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "type",
-                  "value": "EMAIL",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "PENDING",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "disabled": true
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "asc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Approve Change Request",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{superAdminUrl}}/change-requests/{{changeRequestId}}/approve",
-              "host": [
-                "{{superAdminUrl}}"
-              ],
-              "path": [
-                "change-requests",
-                "{{changeRequestId}}",
-                "approve"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Reject Change Request",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"The request does not follow the admin credential policy.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{superAdminUrl}}/change-requests/{{changeRequestId}}/reject",
-              "host": [
-                "{{superAdminUrl}}"
-              ],
-              "path": [
-                "change-requests",
-                "{{changeRequestId}}",
-                "reject"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    }
-  ],
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:5000"
-    },
-    {
-      "key": "apiPrefix",
-      "value": "/api"
-    },
-    {
-      "key": "authUrl",
-      "value": "{{baseUrl}}{{apiPrefix}}/auth"
-    },
-    {
-      "key": "demoUserName",
-      "value": "SafePath Demo User"
-    },
-    {
-      "key": "demoUserEmail",
-      "value": "user@safepath.local"
-    },
-    {
-      "key": "demoUserPassword",
-      "value": "User@12345"
-    },
-    {
-      "key": "adminUserEmail",
-      "value": "admin@safepath.local"
-    },
-    {
-      "key": "adminUserPassword",
-      "value": "Admin@12345"
-    },
-    {
-      "key": "superAdminEmail",
-      "value": "superadmin@safepath.local"
-    },
-    {
-      "key": "superAdminPassword",
-      "value": "SuperAdmin@12345"
-    },
-    {
-      "key": "newUserName",
-      "value": "SafePath New User"
-    },
-    {
-      "key": "registrationEmail",
-      "value": "new.user@safepath.local"
-    },
-    {
-      "key": "newUserPassword",
-      "value": "NewUser@12345"
-    },
-    {
-      "key": "usersUrl",
-      "value": "{{baseUrl}}{{apiPrefix}}/users"
-    },
-    {
-      "key": "adminUrl",
-      "value": "{{baseUrl}}{{apiPrefix}}/admin"
-    },
-    {
-      "key": "demoUserId",
-      "value": "a3ac9895-e986-421c-85cc-06a885e7feb3"
-    },
-    {
-      "key": "deletionRequestUserId",
-      "value": "{{demoUserId}}"
-    },
-    {
-      "key": "superAdminUrl",
-      "value": "{{baseUrl}}{{apiPrefix}}/super-admin"
-    },
-    {
-      "key": "changeRequestId",
-      "value": ""
-    },
-    {
-      "key": "registrationOtp",
-      "value": ""
-    },
-    {
-      "key": "refreshToken",
-      "value": ""
-    },
-    {
-      "key": "forgotPasswordOtp",
-      "value": ""
-    },
-    {
-      "key": "restoreOtp",
-      "value": ""
-    },
-    {
-      "key": "incidentsUrl",
-      "value": "{{baseUrl}}{{apiPrefix}}/incidents"
-    },
-  {
-    "key": "incidentId",
-    "value": ""
-  },
-  {
-    "key": "commentId",
-    "value": ""
-  },
-  {
-    "key": "dashboardUrl",
-      "value": "{{baseUrl}}{{apiPrefix}}/dashboard"
-    }
-  ]
+	"info": {
+		"_postman_id": "e5f67c00-a508-4e98-ae66-c2735a826ce5",
+		"name": "SafePath (Backend)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "54687734",
+		"_collection_link": "https://go.postman.co/collection/54687734-e5f67c00-a508-4e98-ae66-c2735a826ce5?source=collection_link"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"{{newUserName}}\",\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"{{newUserPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/register",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Email",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"otp\": \"{{registrationOtp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/verify-email",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"verify-email"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Resend OTP",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/resend-otp",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"resend-otp"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"{{newUserPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/login",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Google Login",
+					"description": "Google sign-in is available only for normal user accounts. Admin and super admin accounts cannot use Google sign-in.",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"idToken\": \"{{googleIdToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/google",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"google"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/refresh-token",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"refresh-token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Me",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{authUrl}}/me",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/logout",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/forgot-password",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"forgot-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Resend Forgot Password OTP",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/resend-forgot-password-otp",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"resend-forgot-password-otp"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"otp\": \"{{forgotPasswordOtp}}\",\n  \"newPassword\": \"{{newUserPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/reset-password",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"reset-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request Account Restore",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/restore/request",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"restore",
+								"request"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Account Restore",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"otp\": \"{{restoreOtp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authUrl}}/restore/verify",
+							"host": [
+								"{{authUrl}}"
+							],
+							"path": [
+								"restore",
+								"verify"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication and session endpoints for SafePath.\n\nBase URL: `{{authUrl}}` (`{{baseUrl}}{{apiPrefix}}/auth`).\n\nDemo sequence:\n1. Register → copy the OTP into `registrationOtp` → Verify Email\n2. Login - Demo User → Get Me → Refresh Token → Logout\n3. Forgot Password → copy OTP into `forgotPasswordOtp` → Reset Password\n4. Request Account Restore → copy OTP into `restoreOtp` → Verify Account Restore\n\nThe seeded accounts require `SEED_ON_START=true`:\n- user@safepath.local / User@12345\n- admin@safepath.local / Admin@12345"
+		},
+		{
+			"name": "Dashboard",
+			"description": "Role-aware dashboard overview. The response changes based on the authenticated account role: USER, ADMIN, or SUPER_ADMIN.\n\nBase URL: `{{dashboardUrl}}` (`{{baseUrl}}{{apiPrefix}}/dashboard`).",
+			"item": [
+				{
+					"name": "Get Dashboard Overview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{dashboardUrl}}/overview",
+							"host": [
+								"{{dashboardUrl}}"
+							],
+							"path": [
+								"overview"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User",
+			"description": "User profile, profile picture, email change verification, and account deletion request endpoints for SafePath.\n\nTo change email, enable `email` and `currentPassword` in Update My Profile. Copy the OTP from the new email into `emailChangeOtp`, then call Verify Email Change.\n\nBase URL: `{{usersUrl}}` (`{{baseUrl}}{{apiPrefix}}/users`).",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{usersUrl}}/me",
+							"host": [
+								"{{usersUrl}}"
+							],
+							"path": [
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update My Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "{{demoUserName}}",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "updated.user@safepath.local",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "currentPassword",
+									"value": "{{demoUserPassword}}",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "newPassword",
+									"value": "UpdatedUser@12345",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{usersUrl}}/me",
+							"host": [
+								"{{usersUrl}}"
+							],
+							"path": [
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Email Change",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"otp\": \"{{emailChangeOtp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{usersUrl}}/me/email/verify",
+							"host": [
+								"{{usersUrl}}"
+							],
+							"path": [
+								"me",
+								"email",
+								"verify"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Profile Picture",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{usersUrl}}/me/avatar",
+							"host": [
+								"{{usersUrl}}"
+							],
+							"path": [
+								"me",
+								"avatar"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request Account Deletion",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"I no longer need this account.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{usersUrl}}/me",
+							"host": [
+								"{{usersUrl}}"
+							],
+							"path": [
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Incidents",
+			"description": "Incident reporting and public browsing endpoints.\n\nBase URL: `{{incidentsUrl}}` (`{{baseUrl}}{{apiPrefix}}/incidents`).",
+			"item": [
+				{
+					"name": "Get Approved Incidents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{incidentsUrl}}?page=1&limit=10",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "area",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "category",
+									"value": "THEFT",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Incident Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{incidentsUrl}}/{{incidentId}}",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"{{incidentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Incidents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{incidentsUrl}}/my-incidents?page=1&limit=10",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"my-incidents"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "PENDING",
+									"disabled": true
+								},
+								{
+									"key": "area",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "category",
+									"value": "THEFT",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Incident Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{incidentsUrl}}/my-incidents/{{incidentId}}",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"my-incidents",
+								"{{incidentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Incident",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Suspicious activity near campus gate",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "A person was observed following visitors near the campus gate after sunset.",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "SUSPICIOUS_ACTIVITY",
+									"type": "text"
+								},
+								{
+									"key": "area",
+									"value": "Campus Gate",
+									"type": "text"
+								},
+								{
+									"key": "location",
+									"value": "Main campus gate, north side",
+									"type": "text"
+								},
+								{
+									"key": "latitude",
+									"value": "23.8103",
+									"type": "text"
+								},
+								{
+									"key": "longitude",
+									"value": "90.4125",
+									"type": "text"
+								},
+								{
+									"key": "incidentDate",
+									"value": "2026-11-05T10:00:00.000Z",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{incidentsUrl}}",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": []
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update My Incident",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Updated suspicious activity near campus gate",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Updated details about suspicious activity observed near the campus gate after sunset.",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "SUSPICIOUS_ACTIVITY",
+									"type": "text"
+								},
+								{
+									"key": "area",
+									"value": "Campus Gate",
+									"type": "text"
+								},
+								{
+									"key": "location",
+									"value": "Main campus gate, north side",
+									"type": "text"
+								},
+								{
+									"key": "latitude",
+									"value": "23.8103",
+									"type": "text"
+								},
+								{
+									"key": "longitude",
+									"value": "90.4125",
+									"type": "text"
+								},
+								{
+									"key": "incidentDate",
+									"value": "2026-11-05T10:00:00.000Z",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{incidentsUrl}}/my-incidents/{{incidentId}}",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"my-incidents",
+								"{{incidentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete My Incident",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{incidentsUrl}}/my-incidents/{{incidentId}}",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"my-incidents",
+								"{{incidentId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Comments",
+			"description": "Incident comments. Comments are readable on approved incidents. Posting and editing require authentication and are rate limited.",
+			"item": [
+				{
+					"name": "Get Incident Comments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{incidentsUrl}}/{{incidentId}}/comments?page=1&limit=20",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"{{incidentId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Comment",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Stay safe and avoid this area after dark.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{incidentsUrl}}/{{incidentId}}/comments",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"{{incidentId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update My Comment",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Updated comment about this incident.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{incidentsUrl}}/{{incidentId}}/comments/{{commentId}}",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"{{incidentId}}",
+								"comments",
+								"{{commentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete My Comment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{incidentsUrl}}/{{incidentId}}/comments/{{commentId}}",
+							"host": [
+								"{{incidentsUrl}}"
+							],
+							"path": [
+								"{{incidentId}}",
+								"comments",
+								"{{commentId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"description": "Administrator user and deletion request endpoints for normal users. Admin credential changes are submitted as requests for a super admin to review.\n\nBase URL: `{{adminUrl}}` (`{{baseUrl}}{{apiPrefix}}/admin`).",
+			"item": [
+				{
+					"name": "Get Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/users",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "role",
+									"value": "USER",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "ACTIVE",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/users/{{demoUserId}}",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"users",
+								"{{demoUserId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Status",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"BLOCKED\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{adminUrl}}/users/{{demoUserId}}/status",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"users",
+								"{{demoUserId}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Deletion Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/users/deletion-requests",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"users",
+								"deletion-requests"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "role",
+									"value": "USER",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "deletionRequestedAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "asc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Account Deletion",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/users/deletion-requests/{{deletionRequestUserId}}/approve",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"users",
+								"deletion-requests",
+								"{{deletionRequestUserId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Account Deletion",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"The account still has unresolved incident reports.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{adminUrl}}/users/deletion-requests/{{deletionRequestUserId}}/reject",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"users",
+								"deletion-requests",
+								"{{deletionRequestUserId}}",
+								"reject"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Restore Deleted Account",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Restored after verifying the account owner's request.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{adminUrl}}/users/{{deletionRequestUserId}}/restore",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"users",
+								"{{deletionRequestUserId}}",
+								"restore"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Submit My Change Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"EMAIL\",\n  \"reason\": \"My admin email address needs to be updated.\",\n  \"requestedEmail\": \"updated.admin@safepath.local\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{adminUrl}}/change-requests",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"change-requests"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Incidents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/incidents?page=1&limit=10",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"incidents"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "PENDING",
+									"disabled": true
+								},
+								{
+									"key": "area",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "category",
+									"value": "THEFT",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Incident Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/incidents/{{incidentId}}",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"incidents",
+								"{{incidentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit Incident",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Moderated suspicious activity near campus gate",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Moderated incident description for public safety awareness.",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "SUSPICIOUS_ACTIVITY",
+									"type": "text"
+								},
+								{
+									"key": "area",
+									"value": "Campus Gate",
+									"type": "text"
+								},
+								{
+									"key": "location",
+									"value": "Main campus gate, north side",
+									"type": "text"
+								},
+								{
+									"key": "latitude",
+									"value": "23.8103",
+									"type": "text"
+								},
+								{
+									"key": "longitude",
+									"value": "90.4125",
+									"type": "text"
+								},
+								{
+									"key": "incidentDate",
+									"value": "2026-11-05T10:00:00.000Z",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{adminUrl}}/incidents/{{incidentId}}",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"incidents",
+								"{{incidentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Incident",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/incidents/{{incidentId}}",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"incidents",
+								"{{incidentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Incident Comment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/incidents/{{incidentId}}/comments/{{commentId}}",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"incidents",
+								"{{incidentId}}",
+								"comments",
+								"{{commentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Incident",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"APPROVED\",\n  \"note\": \"Verified by a moderator.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{adminUrl}}/incidents/{{incidentId}}/review",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"incidents",
+								"{{incidentId}}",
+								"review"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Incident",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"REJECTED\",\n  \"note\": \"Insufficient details to verify this report.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{adminUrl}}/incidents/{{incidentId}}/review",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"incidents",
+								"{{incidentId}}",
+								"review"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Super Admin",
+			"description": "Super administrator endpoints for managing admins, roles, and admin email/password change requests. Approving an email change sends an OTP to the new address; the admin verifies it through the Users collection before the email changes.\n\nBase URL: `{{superAdminUrl}}` (`{{baseUrl}}{{apiPrefix}}/super-admin`).",
+			"item": [
+				{
+					"name": "Get Admins",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{superAdminUrl}}/admins",
+							"host": [
+								"{{superAdminUrl}}"
+							],
+							"path": [
+								"admins"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "role",
+									"value": "ADMIN",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "ACTIVE",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Role",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"ADMIN\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{superAdminUrl}}/users/{{demoUserId}}/role",
+							"host": [
+								"{{superAdminUrl}}"
+							],
+							"path": [
+								"users",
+								"{{demoUserId}}",
+								"role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Change Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{superAdminUrl}}/change-requests",
+							"host": [
+								"{{superAdminUrl}}"
+							],
+							"path": [
+								"change-requests"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "type",
+									"value": "EMAIL",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "PENDING",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "asc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Change Request",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{superAdminUrl}}/change-requests/{{changeRequestId}}/approve",
+							"host": [
+								"{{superAdminUrl}}"
+							],
+							"path": [
+								"change-requests",
+								"{{changeRequestId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Change Request",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"The request does not follow the admin credential policy.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{superAdminUrl}}/change-requests/{{changeRequestId}}/reject",
+							"host": [
+								"{{superAdminUrl}}"
+							],
+							"path": [
+								"change-requests",
+								"{{changeRequestId}}",
+								"reject"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000"
+		},
+		{
+			"key": "apiPrefix",
+			"value": "/api"
+		},
+		{
+			"key": "authUrl",
+			"value": "{{baseUrl}}{{apiPrefix}}/auth"
+		},
+		{
+			"key": "demoUserName",
+			"value": "SafePath Demo User"
+		},
+		{
+			"key": "demoUserEmail",
+			"value": "user@safepath.local"
+		},
+		{
+			"key": "demoUserPassword",
+			"value": "User@12345"
+		},
+		{
+			"key": "adminUserEmail",
+			"value": "admin@safepath.local"
+		},
+		{
+			"key": "adminUserPassword",
+			"value": "Admin@12345"
+		},
+		{
+			"key": "superAdminEmail",
+			"value": "superadmin@safepath.local"
+		},
+		{
+			"key": "superAdminPassword",
+			"value": "SuperAdmin@12345"
+		},
+		{
+			"key": "newUserName",
+			"value": "SafePath New User"
+		},
+		{
+			"key": "registrationEmail",
+			"value": "new.user@safepath.local"
+		},
+		{
+			"key": "newUserPassword",
+			"value": "NewUser@12345"
+		},
+		{
+			"key": "usersUrl",
+			"value": "{{baseUrl}}{{apiPrefix}}/users"
+		},
+		{
+			"key": "adminUrl",
+			"value": "{{baseUrl}}{{apiPrefix}}/admin"
+		},
+		{
+			"key": "demoUserId",
+			"value": "a3ac9895-e986-421c-85cc-06a885e7feb3"
+		},
+		{
+			"key": "deletionRequestUserId",
+			"value": "{{demoUserId}}"
+		},
+		{
+			"key": "superAdminUrl",
+			"value": "{{baseUrl}}{{apiPrefix}}/super-admin"
+		},
+		{
+			"key": "changeRequestId",
+			"value": ""
+		},
+		{
+			"key": "registrationOtp",
+			"value": ""
+		},
+		{
+			"key": "refreshToken",
+			"value": ""
+		},
+		{
+			"key": "googleIdToken",
+			"value": ""
+		},
+		{
+			"key": "forgotPasswordOtp",
+			"value": ""
+		},
+		{
+			"key": "restoreOtp",
+			"value": ""
+		},
+		{
+			"key": "emailChangeOtp",
+			"value": ""
+		},
+		{
+			"key": "incidentsUrl",
+			"value": "{{baseUrl}}{{apiPrefix}}/incidents"
+		},
+		{
+			"key": "incidentId",
+			"value": ""
+		},
+		{
+			"key": "commentId",
+			"value": ""
+		},
+		{
+			"key": "dashboardUrl",
+			"value": "{{baseUrl}}{{apiPrefix}}/dashboard"
+		}
+	]
 }

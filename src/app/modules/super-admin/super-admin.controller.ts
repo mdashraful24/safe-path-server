@@ -67,7 +67,9 @@ const approveChangeRequest = catchAsync(async (req, res) => {
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Admin change request approved.",
+		message: result.emailVerificationRequired
+			? "Admin change request approved. The admin must verify the new email to complete the change."
+			: "Admin change request approved.",
 		data: result,
 	});
 });

@@ -10,6 +10,7 @@ import { prisma } from "../../lib/prisma";
 import logger from "../../logger";
 import { AppError } from "../../utils/AppError";
 import { isAccountUnavailable } from "../../utils/accountLifecycle";
+import { createPendingEmailChange } from "../../utils/emailChange";
 import {
 	sendAdminChangeRequestApprovedEmail,
 	sendAdminChangeRequestRejectedEmail,
@@ -85,7 +86,13 @@ const updateUserRole = async (
 
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { id: true, role: true, status: true, isDeleted: true },
+		select: {
+			id: true,
+			role: true,
+			status: true,
+			isDeleted: true,
+			passwordHash: true,
+		},
 	});
 
 	if (!user || isAccountUnavailable(user)) {
@@ -96,6 +103,13 @@ const updateUserRole = async (
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
 			"Resolve the pending account deletion request first.",
+		);
+	}
+
+	if (payload.role !== Role.USER && !user.passwordHash) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"This Google-only account cannot be promoted. The user must have a password before becoming an admin.",
 		);
 	}
 
@@ -288,24 +302,16 @@ const approveChangeRequest = async (requesterId: string, requestId: string) => {
 		);
 	}
 
-	await prisma.$transaction(async (tx) => {
-		await tx.user.update({
-			where: { id: request.targetUserId },
-			data:
-				request.type === AdminChangeRequestType.EMAIL
-					? {
-							email: request.requestedEmail as string,
-							emailVerified: true,
-							emailVerifiedAt: new Date(),
-							tokenVersion: { increment: 1 },
-						}
-					: {
-							passwordHash: request.requestedPasswordHash as string,
-							tokenVersion: { increment: 1 },
-						},
+	const isEmailChange = request.type === AdminChangeRequestType.EMAIL;
+
+	if (isEmailChange) {
+		await createPendingEmailChange({
+			userId: request.targetUserId,
+			email: request.requestedEmail as string,
+			name: request.targetUser.name,
 		});
 
-		await tx.adminChangeRequest.update({
+		await prisma.adminChangeRequest.update({
 			where: { id: request.id },
 			data: {
 				status: AdminChangeRequestStatus.APPROVED,
@@ -314,7 +320,27 @@ const approveChangeRequest = async (requesterId: string, requestId: string) => {
 				requestedPasswordHash: null,
 			},
 		});
-	});
+	} else {
+		await prisma.$transaction(async (tx) => {
+			await tx.user.update({
+				where: { id: request.targetUserId },
+				data: {
+					passwordHash: request.requestedPasswordHash as string,
+					tokenVersion: { increment: 1 },
+				},
+			});
+
+			await tx.adminChangeRequest.update({
+				where: { id: request.id },
+				data: {
+					status: AdminChangeRequestStatus.APPROVED,
+					reviewedById: requesterId,
+					reviewedAt: new Date(),
+					requestedPasswordHash: null,
+				},
+			});
+		});
+	}
 
 	if (request.type === AdminChangeRequestType.PASSWORD) {
 		try {
@@ -328,9 +354,10 @@ const approveChangeRequest = async (requesterId: string, requestId: string) => {
 	} else {
 		try {
 			await sendAdminChangeRequestApprovedEmail({
-				to: request.requestedEmail as string,
+				to: request.targetUser.email,
 				name: request.requester.name,
 				type: request.type,
+				pendingVerification: true,
 			});
 		} catch (error) {
 			logger.error("Failed to send admin change approval email:", error);
@@ -341,6 +368,7 @@ const approveChangeRequest = async (requesterId: string, requestId: string) => {
 		id: request.id,
 		type: request.type,
 		status: AdminChangeRequestStatus.APPROVED,
+		emailVerificationRequired: isEmailChange,
 	};
 };
 

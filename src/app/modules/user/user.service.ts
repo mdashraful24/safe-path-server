@@ -6,12 +6,20 @@ import {
 } from "../../../../generated/prisma/enums";
 import { cloudinary, deleteCloudinaryImage } from "../../lib/cloudinary";
 import { prisma } from "../../lib/prisma";
+import logger from "../../logger";
 import { AppError } from "../../utils/AppError";
 import { isAccountUnavailable } from "../../utils/accountLifecycle";
+import {
+	createPendingEmailChange,
+	deletePendingEmailChange,
+	getPendingEmailChange,
+} from "../../utils/emailChange";
+import { sendEmailChangedEmail } from "../../utils/email";
 import { hashPassword, verifyPassword } from "../../utils/password";
 import type {
 	IRequestAccountDeletionPayload,
 	IUpdateProfilePayload,
+	IVerifyEmailChangePayload,
 } from "./user.interface";
 
 const uploadProfileImage = (file: Express.Multer.File) =>
@@ -63,6 +71,7 @@ const updateProfile = async (
 		where: { id: userId },
 		select: {
 			id: true,
+			name: true,
 			email: true,
 			passwordHash: true,
 			role: true,
@@ -76,13 +85,15 @@ const updateProfile = async (
 
 	const data: {
 		name?: string;
-		email?: string;
-		emailVerified?: boolean;
-		emailVerifiedAt?: Date;
 		passwordHash?: string;
 		imageUrl?: string;
 		imagePublicId?: string;
 	} = {};
+	let emailChange: {
+		email: string;
+		expiresIn: number;
+		expiresAt: Date;
+	} | null = null;
 
 	if (payload.name) {
 		data.name = payload.name;
@@ -95,6 +106,13 @@ const updateProfile = async (
 			throw new AppError(
 				httpStatus.FORBIDDEN,
 				"Admins must submit an email or password change request to a super admin.",
+			);
+		}
+
+		if (!user.passwordHash) {
+			throw new AppError(
+				httpStatus.FORBIDDEN,
+				"This account uses Google sign-in and cannot add email/password credentials.",
 			);
 		}
 
@@ -134,9 +152,11 @@ const updateProfile = async (
 				);
 			}
 
-			data.email = email;
-			data.emailVerified = true;
-			data.emailVerifiedAt = new Date();
+			emailChange = await createPendingEmailChange({
+				userId,
+				email,
+				name: user.name,
+			});
 		}
 	}
 
@@ -151,7 +171,7 @@ const updateProfile = async (
 		data.imagePublicId = uploadedImage.imagePublicId;
 	}
 
-	if (Object.keys(data).length === 0) {
+	if (Object.keys(data).length === 0 && !emailChange) {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
 			"Provide a name, email, password, or profile picture to update.",
@@ -159,23 +179,102 @@ const updateProfile = async (
 	}
 
 	try {
-		const updated = await prisma.user.update({
-			where: { id: userId },
-			data,
-			omit: { passwordHash: true },
-		});
+		const updated =
+			Object.keys(data).length > 0
+				? await prisma.user.update({
+						where: { id: userId },
+						data,
+						omit: { passwordHash: true },
+					})
+				: await prisma.user.findUniqueOrThrow({
+						where: { id: userId },
+						omit: { passwordHash: true },
+					});
 
 		if (uploadedImage && user.imagePublicId) {
 			await deleteCloudinaryImage(user.imagePublicId);
 		}
 
-		return updated;
+		return { user: updated, emailChange };
 	} catch (error) {
 		if (uploadedImage) {
 			await deleteCloudinaryImage(uploadedImage.imagePublicId);
 		}
 		throw error;
 	}
+};
+
+const verifyEmailChange = async (
+	userId: string,
+	payload: IVerifyEmailChangePayload,
+) => {
+	const pendingEmailChange = await getPendingEmailChange(userId);
+
+	if (!pendingEmailChange || pendingEmailChange.otp !== payload.otp) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Verification code is expired or invalid.",
+		);
+	}
+
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: {
+			id: true,
+			name: true,
+			email: true,
+			status: true,
+			isDeleted: true,
+		},
+	});
+
+	if (!user || isAccountUnavailable(user)) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found.");
+	}
+
+	if (user.status !== UserStatus.ACTIVE) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Only active accounts can change their email address.",
+		);
+	}
+
+	const emailOwner = await prisma.user.findUnique({
+		where: { email: pendingEmailChange.email },
+		select: { id: true },
+	});
+
+	if (emailOwner && emailOwner.id !== user.id) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"User with this email already exists.",
+		);
+	}
+
+	const updated = await prisma.user.update({
+		where: { id: userId },
+		data: {
+			email: pendingEmailChange.email,
+			emailVerified: true,
+			emailVerifiedAt: new Date(),
+			tokenVersion: { increment: 1 },
+		},
+		omit: { passwordHash: true },
+	});
+
+	await deletePendingEmailChange(userId);
+
+	try {
+		await sendEmailChangedEmail({
+			to: user.email,
+			name: user.name,
+			newEmail: pendingEmailChange.email,
+		});
+	} catch (error) {
+		logger.error("Failed to send email changed notification:", error);
+	}
+
+	return updated;
 };
 
 const removeProfileImage = async (userId: string) => {
@@ -256,6 +355,7 @@ const requestAccountDeletion = async (
 export const UserService = {
 	getProfile,
 	updateProfile,
+	verifyEmailChange,
 	removeProfileImage,
 	requestAccountDeletion,
 };

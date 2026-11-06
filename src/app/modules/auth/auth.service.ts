@@ -1,11 +1,15 @@
 import { randomInt } from "node:crypto";
+import type { TokenPayload } from "google-auth-library";
 import httpStatus from "http-status";
+import { Prisma } from "../../../../generated/prisma/client";
 import {
 	AccountLifecycleEventType,
+	AuthProvider,
 	Role,
 	UserStatus,
 } from "../../../../generated/prisma/enums";
 import config from "../../config";
+import { googleClient, isGoogleAuthConfigured } from "../../lib/googleAuth";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
 import logger from "../../logger";
@@ -16,8 +20,9 @@ import {
 	isAccountUnavailable,
 } from "../../utils/accountLifecycle";
 import {
-	sendAccountRestoreOtpEmail,
 	sendAccountRestoredEmail,
+	sendAccountRestoreOtpEmail,
+	sendGoogleSignInLinkedEmail,
 	sendPasswordChangedEmail,
 	sendPasswordResetOtpEmail,
 	sendRegistrationOtpEmail,
@@ -27,6 +32,7 @@ import { jwtUtils } from "../../utils/jwt";
 import { hashPassword, verifyPassword } from "../../utils/password";
 import type {
 	IForgotPasswordPayload,
+	IGoogleLoginPayload,
 	ILoginPayload,
 	IRegisterPayload,
 	IResendRegistrationOtpPayload,
@@ -76,6 +82,45 @@ const createTokens = (user: TokenUser) => {
 			config.jwt_refresh_expires_in,
 		),
 	};
+};
+
+type SignInUser = {
+	status: UserStatus;
+	isDeleted: boolean;
+	emailVerified: boolean;
+};
+
+const assertUserCanUseGoogleSignIn = (user: { role: Role }) => {
+	if (user.role !== Role.USER) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Google sign-in is only available for user accounts.",
+		);
+	}
+};
+
+const assertUserCanSignIn = (user: SignInUser) => {
+	if (isAccountUnavailable(user)) {
+		throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
+	}
+
+	if (user.status === UserStatus.PENDING_DELETION) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account deletion request is pending administrator approval.",
+		);
+	}
+
+	if (user.status === UserStatus.BLOCKED) {
+		throw new AppError(httpStatus.FORBIDDEN, "User is blocked.");
+	}
+
+	if (!user.emailVerified) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Please verify your email address before logging in.",
+		);
+	}
 };
 
 const register = async (payload: IRegisterPayload) => {
@@ -250,25 +295,12 @@ const login = async (payload: ILoginPayload) => {
 		throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password.");
 	}
 
-	if (isAccountUnavailable(user)) {
-		throw new AppError(httpStatus.FORBIDDEN, "User is deleted.");
-	}
+	assertUserCanSignIn(user);
 
-	if (user.status === UserStatus.PENDING_DELETION) {
+	if (!user.passwordHash) {
 		throw new AppError(
-			httpStatus.FORBIDDEN,
-			"Your account deletion request is pending administrator approval.",
-		);
-	}
-
-	if (user.status === UserStatus.BLOCKED) {
-		throw new AppError(httpStatus.FORBIDDEN, "User is blocked.");
-	}
-
-	if (!user.emailVerified) {
-		throw new AppError(
-			httpStatus.FORBIDDEN,
-			"Please verify your email address before logging in.",
+			httpStatus.BAD_REQUEST,
+			"This account uses Google sign-in. Please continue with Google.",
 		);
 	}
 
@@ -282,6 +314,169 @@ const login = async (payload: ILoginPayload) => {
 	}
 
 	return createTokens(user);
+};
+
+const googleLogin = async (payload: IGoogleLoginPayload) => {
+	if (!isGoogleAuthConfigured) {
+		throw new AppError(
+			httpStatus.SERVICE_UNAVAILABLE,
+			"Google sign-in is not configured.",
+		);
+	}
+
+	let tokenPayload: TokenPayload | undefined;
+
+	try {
+		const ticket = await googleClient.verifyIdToken({
+			idToken: payload.idToken,
+			audience: config.google_client_id,
+		});
+
+		tokenPayload = ticket.getPayload();
+	} catch (error) {
+		logger.warn("Google ID token verification failed:", error);
+
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Invalid or expired Google ID token.",
+		);
+	}
+
+	const googleId = tokenPayload?.sub;
+	const email = tokenPayload?.email?.trim().toLowerCase();
+	const emailVerified = tokenPayload?.email_verified;
+
+	if (!googleId || !email) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Google account information is incomplete.",
+		);
+	}
+
+	if (emailVerified !== true) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Google email address is not verified.",
+		);
+	}
+
+	const name =
+		tokenPayload?.name?.trim() || email.split("@")[0] || "SafePath User";
+
+	let user = await prisma.user.findUnique({ where: { googleId } });
+
+	if (user) {
+		assertUserCanUseGoogleSignIn(user);
+		assertUserCanSignIn(user);
+
+		user = await prisma.user.update({
+			where: { id: user.id },
+			data: { lastLoginAt: new Date() },
+		});
+
+		return createTokens(user);
+	}
+
+	const existingUser = await prisma.user.findUnique({ where: { email } });
+
+	if (existingUser) {
+		assertUserCanUseGoogleSignIn(existingUser);
+
+		if (existingUser.googleId && existingUser.googleId !== googleId) {
+			throw new AppError(
+				httpStatus.CONFLICT,
+				"This email is already linked to a different Google account.",
+			);
+		}
+
+		assertUserCanSignIn(existingUser);
+
+		user = await prisma.user.update({
+			where: { id: existingUser.id },
+			data: {
+				googleId,
+				lastLoginAt: new Date(),
+			},
+		});
+
+		try {
+			await sendGoogleSignInLinkedEmail({
+				to: user.email,
+				name: user.name,
+			});
+		} catch (error) {
+			logger.error("Failed to send Google sign-in linked email:", error);
+		}
+
+		return createTokens(user);
+	}
+
+	try {
+		const createdUser = await prisma.user.create({
+			data: {
+				name,
+				email,
+				role: Role.USER,
+				passwordHash: null,
+				googleId,
+				authProvider: AuthProvider.GOOGLE,
+				emailVerified: true,
+				emailVerifiedAt: new Date(),
+				lastLoginAt: new Date(),
+			},
+		});
+
+		try {
+			await sendWelcomeEmail({
+				to: createdUser.email,
+				name: createdUser.name,
+			});
+		} catch (error) {
+			logger.error("Failed to send Google welcome email:", error);
+		}
+
+		return createTokens(createdUser);
+	} catch (error) {
+		if (
+			!(error instanceof Prisma.PrismaClientKnownRequestError) ||
+			error.code !== "P2002"
+		) {
+			throw error;
+		}
+
+		const racedUser =
+			(await prisma.user.findUnique({ where: { googleId } })) ??
+			(await prisma.user.findUnique({ where: { email } }));
+
+		if (!racedUser) {
+			throw error;
+		}
+
+		assertUserCanUseGoogleSignIn(racedUser);
+
+		if (racedUser.googleId && racedUser.googleId !== googleId) {
+			throw new AppError(
+				httpStatus.CONFLICT,
+				"This email is already linked to a different Google account.",
+			);
+		}
+
+		assertUserCanSignIn(racedUser);
+
+		if (racedUser.googleId === googleId) {
+			return createTokens(racedUser);
+		}
+
+		const linkedUser = await prisma.user.update({
+			where: { id: racedUser.id },
+			data: {
+				googleId,
+				lastLoginAt: new Date(),
+			},
+		});
+
+		return createTokens(linkedUser);
+	}
 };
 
 const getMe = async (userId: string) => {
@@ -334,7 +529,8 @@ const forgotPassword = async (payload: IForgotPasswordPayload) => {
 		user &&
 		isAccountActive(user) &&
 		user.emailVerified &&
-		user.role !== Role.ADMIN
+		user.role !== Role.ADMIN &&
+		user.passwordHash
 	) {
 		const otp = randomInt(100000, 1000000).toString();
 		const key = `forgot-password:${email}`;
@@ -372,7 +568,12 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 
 	const user = await prisma.user.findUnique({ where: { email } });
 
-	if (!user || !isAccountActive(user) || user.role === Role.ADMIN) {
+	if (
+		!user ||
+		!isAccountActive(user) ||
+		user.role === Role.ADMIN ||
+		!user.passwordHash
+	) {
 		throw new AppError(httpStatus.BAD_REQUEST, "OTP is expired or invalid.");
 	}
 
@@ -536,6 +737,7 @@ export const AuthService = {
 	resendRegistrationOtp,
 	verifyEmail,
 	login,
+	googleLogin,
 	getMe,
 	refresh,
 	forgotPassword,

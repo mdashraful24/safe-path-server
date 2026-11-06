@@ -5,6 +5,7 @@ import { clearAuthCookies, setAuthCookies } from "../../utils/cookie";
 import { sendResponse } from "../../utils/sendResponse";
 import type {
 	IForgotPasswordPayload,
+	IGoogleLoginPayload,
 	ILoginPayload,
 	IRegisterPayload,
 	IResendRegistrationOtpPayload,
@@ -62,6 +63,19 @@ const login = catchAsync(async (req, res) => {
 		statusCode: httpStatus.OK,
 		success: true,
 		message: "User logged in successfully.",
+		data: result,
+	});
+});
+
+const googleLogin = catchAsync(async (req, res) => {
+	const result = await AuthService.googleLogin(req.body as IGoogleLoginPayload);
+
+	setAuthCookies(res, result);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Google sign-in successful.",
 		data: result,
 	});
 });
@@ -172,6 +186,7 @@ export const AuthController = {
 	verifyEmail,
 	resendRegistrationOtp,
 	login,
+	googleLogin,
 	refreshToken,
 	logout,
 	getMe,

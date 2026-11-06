@@ -53,6 +53,16 @@ export const authValidation = {
 			.max(72, "Password must be at most 72 characters long."),
 	}),
 
+	googleLogin: z
+		.object({
+			idToken: z
+				.string("Google ID token is required.")
+				.trim()
+				.min(1, "Google ID token is required.")
+				.max(10000, "Google ID token is too long."),
+		})
+		.strict(),
+
 	forgotPassword: z.object({
 		email: emailSchema,
 	}),

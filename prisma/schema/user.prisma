@@ -4,7 +4,10 @@ model User {
   name  String
   email String @unique
 
-  passwordHash String
+  passwordHash String?
+
+  googleId     String?      @unique
+  authProvider AuthProvider @default(CREDENTIAL)
 
   imageUrl      String?
   imagePublicId String?

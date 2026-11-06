@@ -6,6 +6,7 @@ import { sendResponse } from "../../utils/sendResponse";
 import type {
 	IRequestAccountDeletionPayload,
 	IUpdateProfilePayload,
+	IVerifyEmailChangePayload,
 } from "./user.interface";
 import { UserService } from "./user.service";
 
@@ -21,7 +22,7 @@ const getProfile = catchAsync(async (req, res) => {
 });
 
 const updateProfile = catchAsync(async (req, res) => {
-	const user = await UserService.updateProfile(
+	const result = await UserService.updateProfile(
 		currentUser(req).id,
 		req.body as IUpdateProfilePayload,
 		req.file,
@@ -30,7 +31,25 @@ const updateProfile = catchAsync(async (req, res) => {
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Profile updated successfully.",
+		message: result.emailChange
+			? "Profile updated. A verification code has been sent to your new email address. Your email will change after verification."
+			: "Profile updated successfully.",
+		data: result.user,
+	});
+});
+
+const verifyEmailChange = catchAsync(async (req, res) => {
+	const user = await UserService.verifyEmailChange(
+		currentUser(req).id,
+		req.body as IVerifyEmailChangePayload,
+	);
+
+	clearAuthCookies(res);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Email changed successfully. Please log in again.",
 		data: user,
 	});
 });
@@ -65,6 +84,7 @@ const requestAccountDeletion = catchAsync(async (req, res) => {
 export const UserController = {
 	getProfile,
 	updateProfile,
+	verifyEmailChange,
 	removeProfileImage,
 	requestAccountDeletion,
 };

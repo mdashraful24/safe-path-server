@@ -18,6 +18,10 @@ export interface ILoginPayload {
 	password: string;
 }
 
+export interface IGoogleLoginPayload {
+	idToken: string;
+}
+
 export interface IForgotPasswordPayload {
 	email: string;
 }

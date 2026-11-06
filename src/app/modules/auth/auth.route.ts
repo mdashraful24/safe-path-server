@@ -39,6 +39,13 @@ router.post(
 	AuthController.login,
 );
 
+router.post(
+	"/google",
+	loginLimiter,
+	validateRequest(authValidation.googleLogin),
+	AuthController.googleLogin,
+);
+
 router.get("/me", requireAuth, AuthController.getMe);
 
 router.post("/refresh-token", authLimiter, AuthController.refreshToken);

@@ -5,6 +5,20 @@ const isEmailConfigured = Boolean(config.smtp_user && config.smtp_password);
 
 type Email = { to: string; name: string };
 type OtpEmail = Email & { otp: string; expiresInMinutes: number };
+type ContactEmail = {
+	name: string;
+	email: string;
+	topic: string;
+	subject: string;
+	message: string;
+};
+type ContactReplyEmail = {
+	to: string;
+	name: string;
+	subject: string;
+	reply: string;
+	repliedBy: string;
+};
 type ChangeRequestEmail = {
 	to: string;
 	name: string;
@@ -371,6 +385,88 @@ export const sendWelcomeEmail = async ({ to, name }: Email): Promise<void> => {
 			"Your SafePath email address has been verified and your account is ready.",
 			"",
 			"You can now report incidents, browse nearby reports, and stay informed about safety in your area.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendContactAcknowledgementEmail = async ({
+	to,
+	name,
+	subject,
+}: Email & { subject: string }): Promise<void> => {
+	await send(
+		to,
+		"We received your message - SafePath",
+		[
+			`Hi ${name},`,
+			"",
+			"Thanks for contacting SafePath. We received your message and our team will review it.",
+			"",
+			`Subject: ${subject}`,
+			"",
+			"We usually respond within 1-2 business days.",
+			"If your matter involves immediate danger, contact your local emergency services.",
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendContactNotificationEmail = async ({
+	name,
+	email,
+	topic,
+	subject,
+	message,
+}: ContactEmail): Promise<void> => {
+	const recipient = config.email_sender || config.smtp_user;
+
+	if (!recipient) return;
+
+	await send(
+		recipient,
+		`New contact message: ${subject}`,
+		[
+			"A new message was submitted through the SafePath contact form.",
+			"",
+			`Name: ${name}`,
+			`Email: ${email}`,
+			`Topic: ${topic}`,
+			`Subject: ${subject}`,
+			"",
+			"Message:",
+			message,
+			"",
+			signature,
+		].join("\n"),
+	);
+};
+
+export const sendContactReplyEmail = async ({
+	to,
+	name,
+	subject,
+	reply,
+	repliedBy,
+}: ContactReplyEmail): Promise<void> => {
+	await send(
+		to,
+		`Re: ${subject} - SafePath`,
+		[
+			`Hi ${name},`,
+			"",
+			"Our team has replied to your message sent to SafePath.",
+			"",
+			`Subject: ${subject}`,
+			"",
+			"Reply:",
+			reply,
+			"",
+			`— ${repliedBy}`,
+			"",
+			"If you need anything else, reply to this email or send us another message through the contact page.",
 			"",
 			signature,
 		].join("\n"),

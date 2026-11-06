@@ -11,6 +11,7 @@ import {
 } from "./app/middlewares/globalErrorHandler";
 import { AdminRoutes } from "./app/modules/admin/admin.route";
 import { AuthRoutes } from "./app/modules/auth/auth.route";
+import { ContactRoutes } from "./app/modules/contact/contact.route";
 import { DashboardRoutes } from "./app/modules/dashboard/dashboard.route";
 import { IncidentRoutes } from "./app/modules/incidents/incident.route";
 import { SuperAdminRoutes } from "./app/modules/super-admin/super-admin.route";
@@ -59,6 +60,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use(`${apiPrefix}/auth`, AuthRoutes);
+app.use(`${apiPrefix}/contact`, ContactRoutes);
 app.use(`${apiPrefix}/users`, UserRoutes);
 app.use(`${apiPrefix}/dashboard`, DashboardRoutes);
 app.use(`${apiPrefix}/incidents`, IncidentRoutes);

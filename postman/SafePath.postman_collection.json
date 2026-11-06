@@ -1604,6 +1604,130 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Contact",
+			"item": [
+				{
+					"name": "Send Contact Message",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"topic\": \"GENERAL\",\n  \"subject\": \"Question about reporting\",\n  \"message\": \"How do I update an incident report after submitting it?\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}{{apiPrefix}}/contact",
+							"host": [
+								"{{baseUrl}}{{apiPrefix}}"
+							],
+							"path": [
+								"contact"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contact Messages",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/contacts",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"contacts"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "searchTerm",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "NEW",
+									"disabled": true
+								},
+								{
+									"key": "topic",
+									"value": "GENERAL",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contact Message Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{adminUrl}}/contacts/{{contactId}}",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"contacts",
+								"{{contactId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reply to Contact Message",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Thanks for reaching out. You can edit your incident report from the dashboard within 24 hours of submitting it.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{adminUrl}}/contacts/{{contactId}}/reply",
+							"host": [
+								"{{adminUrl}}"
+							],
+							"path": [
+								"contacts",
+								"{{contactId}}",
+								"reply"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
@@ -1722,6 +1846,10 @@
 		{
 			"key": "dashboardUrl",
 			"value": "{{baseUrl}}{{apiPrefix}}/dashboard"
+		},
+		{
+			"key": "contactId",
+			"value": ""
 		}
 	]
 }

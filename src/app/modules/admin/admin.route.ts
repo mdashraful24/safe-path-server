@@ -3,6 +3,8 @@ import { upload } from "../../lib/multer";
 import { requireAdmin, requireAuth } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { CommentController } from "../comments/comment.controller";
+import { ContactController } from "../contact/contact.controller";
+import { contactValidation } from "../contact/contact.validation";
 import { IncidentController } from "../incidents/incident.controller";
 import { incidentValidation } from "../incidents/incident.validation";
 import { AdminController } from "./admin.controller";
@@ -12,6 +14,14 @@ const router = Router();
 
 router.use(requireAuth);
 router.use(requireAdmin);
+
+router.get("/contacts", ContactController.listContactMessages);
+router.get("/contacts/:contactId", ContactController.getContactMessage);
+router.post(
+	"/contacts/:contactId/reply",
+	validateRequest(contactValidation.reply),
+	ContactController.replyToContactMessage,
+);
 
 router.get("/users", AdminController.listUsers);
 router.get("/users/deletion-requests", AdminController.getDeletionRequests);

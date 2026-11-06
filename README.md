@@ -34,6 +34,7 @@ requests.
 - User blocking, restoration, and account deletion workflows
 - Admin change requests reviewed by super admins
 - Authenticated dashboard overview
+- Public contact form with rate limiting, database storage, and email notifications
 - Redis-backed services and scheduled account cleanup
 - Automatic demo account and incident seeding when the server starts
 
@@ -140,6 +141,7 @@ bun run db:studio
 | Area           | Base path             |
 | -------------- | --------------------- |
 | Authentication | `/api/v1/auth`        |
+| Contact        | `/api/v1/contact`     |
 | Users          | `/api/v1/users`       |
 | Incidents      | `/api/v1/incidents`   |
 | Dashboard      | `/api/v1/dashboard`   |
@@ -206,6 +208,39 @@ DELETE /api/v1/incidents/:incidentId/comments/:commentId
 Comment creation and updates require authentication and are rate limited.
 Authors can edit or delete their own comments. Administrators can delete any
 comment through `/api/v1/admin/incidents/:incidentId/comments/:commentId`.
+
+The public contact form accepts messages without authentication and is rate
+limited. Each submission is stored in the database and triggers a confirmation
+email to the sender plus an internal notification to the configured sender
+address:
+
+```text
+POST /api/v1/contact
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "topic": "GENERAL",
+  "subject": "Question about reporting",
+  "message": "How do I update an incident report after submitting it?"
+}
+```
+
+Allowed topics are `GENERAL`, `REPORT_ISSUE`, `ACCOUNT`, `SAFETY`,
+`PARTNERSHIP`, and `OTHER`.
+
+Administrators and super admins can review and reply to contact messages:
+
+```text
+GET  /api/v1/admin/contacts
+GET  /api/v1/admin/contacts/:contactId
+POST /api/v1/admin/contacts/:contactId/reply
+{ "message": "Thanks for reaching out..." }
+```
+
+The list supports `page`, `limit`, `searchTerm`, `status`, `topic`, and
+`sortOrder`. Replying stores the reply, marks the message as `RESOLVED`, and
+automatically emails the address that submitted the contact form. These routes
+require an admin or super admin session.
 
 ## Links
 

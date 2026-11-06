@@ -1,0 +1,39 @@
+enum ContactTopic {
+  GENERAL
+  REPORT_ISSUE
+  ACCOUNT
+  SAFETY
+  PARTNERSHIP
+  OTHER
+}
+
+enum ContactMessageStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+model ContactMessage {
+  id String @id @default(uuid())
+
+  name    String
+  email   String
+  topic   ContactTopic        @default(GENERAL)
+  subject String
+  message String
+
+  status ContactMessageStatus @default(NEW)
+
+  reply       String?
+  repliedAt   DateTime?
+  repliedById String?
+  repliedBy   User?     @relation("ContactMessageReplies", fields: [repliedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@index([repliedById])
+  @@map("contact_messages")
+}

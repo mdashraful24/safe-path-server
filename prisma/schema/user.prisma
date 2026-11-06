@@ -53,6 +53,8 @@ model User {
   accountLifecycleEvents  AccountLifecycleEvent[] @relation("AccountLifecycleEvents")
   accountLifecycleActions AccountLifecycleEvent[] @relation("AccountLifecycleActions")
 
+  contactMessageReplies ContactMessage[] @relation("ContactMessageReplies")
+
   @@index([role])
   @@index([status])
   @@index([status, purgeAfter])

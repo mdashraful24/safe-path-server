@@ -42,3 +42,11 @@ export const commentLimiter = rateLimit({
 	limit: 30,
 	message: tooMany("Too many comment actions. Please try again in 15 minutes."),
 });
+
+export const contactLimiter = rateLimit({
+	...common,
+	limit: 5,
+	message: tooMany(
+		"Too many contact requests. Please try again in 15 minutes.",
+	),
+});

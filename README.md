@@ -1,9 +1,10 @@
 # SafePath API
 
 SafePath is a safety incident reporting and management API. Users can register,
-report incidents, upload incident images, browse approved public incidents, and
-manage their accounts. Administrators can review incidents, manage users, and
-handle account lifecycle requests.
+report incidents, upload incident images, browse approved public incidents,
+comment on approved incidents, and manage their accounts. Administrators can
+review incidents, moderate comments, manage users, and handle account lifecycle
+requests.
 
 ## Main Technologies
 
@@ -27,6 +28,7 @@ handle account lifecycle requests.
 - Public listing and details for approved incidents only
 - Authenticated users can create, edit, and delete pending incidents
 - Incident image upload and replacement through Cloudinary
+- Paginated comments on approved incidents with ownership and moderation
 - Admin incident review with approval and rejection notes
 - User blocking, restoration, and account deletion workflows
 - Admin change requests reviewed by super admins
@@ -146,9 +148,22 @@ GET /api/v1/incidents
 GET /api/v1/incidents/:incidentId
 ```
 
+Approved incidents support paginated comments:
+
+```text
+GET    /api/v1/incidents/:incidentId/comments
+POST   /api/v1/incidents/:incidentId/comments
+PATCH  /api/v1/incidents/:incidentId/comments/:commentId
+DELETE /api/v1/incidents/:incidentId/comments/:commentId
+```
+
+Comment creation and updates require authentication and are rate limited.
+Authors can edit or delete their own comments. Administrators can delete any
+comment through `/api/v1/admin/incidents/:incidentId/comments/:commentId`.
+
 ## Links
 
 - Live API: No deployed URL is configured in this repository.
 - Local API health check: http://localhost:5000/health
-- Postman collection: [SafePath Backend Collection](./postman/SafePath%20(Backend).postman_collection.json)
-- Postman collection link: https://go.postman.co/collection/54687734-e5f67c00-a508-4e98-ae66-c2735a826ce5?source=collection_link
+- Postman collection: [SafePath Backend Collection](./postman/SafePath.postman_collection.json)
+- Postman collection link: https://documenter.getpostman.com/view/59636503/2sBYHYtctK

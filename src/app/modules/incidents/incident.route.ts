@@ -2,6 +2,7 @@ import { Router } from "express";
 import { upload } from "../../lib/multer";
 import { requireAuth } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
+import { CommentRoutes } from "../comments/comment.route";
 import { IncidentController } from "./incident.controller";
 import { incidentValidation } from "./incident.validation";
 
@@ -33,6 +34,7 @@ router.delete(
 	requireAuth,
 	IncidentController.deleteMyIncident,
 );
+router.use("/:incidentId/comments", CommentRoutes);
 router.get("/:incidentId", IncidentController.getPublicIncident);
 
 export const IncidentRoutes = router;

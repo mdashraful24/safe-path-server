@@ -2,6 +2,7 @@ import { Router } from "express";
 import { upload } from "../../lib/multer";
 import { requireAdmin, requireAuth } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
+import { CommentController } from "../comments/comment.controller";
 import { IncidentController } from "../incidents/incident.controller";
 import { incidentValidation } from "../incidents/incident.validation";
 import { AdminController } from "./admin.controller";
@@ -52,6 +53,10 @@ router.patch(
 router.delete(
 	"/incidents/:incidentId",
 	IncidentController.deleteIncidentForAdmin,
+);
+router.delete(
+	"/incidents/:incidentId/comments/:commentId",
+	CommentController.deleteCommentForAdmin,
 );
 router.patch(
 	"/incidents/:incidentId/review",

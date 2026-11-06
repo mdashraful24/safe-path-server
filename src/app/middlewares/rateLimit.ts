@@ -36,3 +36,9 @@ export const otpLimiter = rateLimit({
 		"Too many verification attempts. Please try again in 15 minutes.",
 	),
 });
+
+export const commentLimiter = rateLimit({
+	...common,
+	limit: 30,
+	message: tooMany("Too many comment actions. Please try again in 15 minutes."),
+});

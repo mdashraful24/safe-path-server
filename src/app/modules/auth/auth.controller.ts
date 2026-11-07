@@ -114,6 +114,17 @@ const getMe = catchAsync(async (req, res) => {
 	});
 });
 
+const getSession = catchAsync(async (req, res) => {
+	const user = await AuthService.getSession(req.cookies.accessToken ?? null);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Session status fetched successfully.",
+		data: user,
+	});
+});
+
 const forgotPassword = catchAsync(async (req, res) => {
 	const result = await AuthService.forgotPassword(
 		req.body as IForgotPasswordPayload,
@@ -190,6 +201,7 @@ export const AuthController = {
 	refreshToken,
 	logout,
 	getMe,
+	getSession,
 	forgotPassword,
 	resendForgotPasswordOtp,
 	resetPassword,

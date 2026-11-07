@@ -5,6 +5,7 @@ const cookieOptions = (maxAge: number): CookieOptions => ({
 	httpOnly: true,
 	secure: config.node_env !== "development",
 	sameSite: config.node_env === "development" ? "lax" : "none",
+	path: "/",
 	maxAge,
 });
 
@@ -25,6 +26,12 @@ export const setAuthCookies = (
 };
 
 export const clearAuthCookies = (res: Response) => {
-	res.clearCookie("accessToken");
-	res.clearCookie("refreshToken");
+	const options = cookieOptions(0);
+
+	res.clearCookie("accessToken", options);
+	res.clearCookie("refreshToken", options);
+
+	// Clear cookies created before the explicit root path was added.
+	res.clearCookie("accessToken", { ...options, path: "/api/v1/auth" });
+	res.clearCookie("refreshToken", { ...options, path: "/api/v1/auth" });
 };

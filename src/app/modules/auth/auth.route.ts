@@ -47,6 +47,7 @@ router.post(
 );
 
 router.get("/me", requireAuth, AuthController.getMe);
+router.get("/session", AuthController.getSession);
 
 router.post("/refresh-token", authLimiter, AuthController.refreshToken);
 

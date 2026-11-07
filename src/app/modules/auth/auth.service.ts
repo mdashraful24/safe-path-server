@@ -492,6 +492,22 @@ const getMe = async (userId: string) => {
 	return user;
 };
 
+const getSession = async (accessToken: string | null) => {
+	if (!accessToken) return null;
+
+	const verified = jwtUtils.verifyToken(accessToken, config.jwt_access_secret);
+
+	if (!verified.success || !verified.data) return null;
+
+	const { userId } = verified.data as { userId: string };
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		omit: { passwordHash: true },
+	});
+
+	return user && !isAccountUnavailable(user) ? user : null;
+};
+
 const refresh = async (token: string | null) => {
 	if (!token) {
 		throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is missing.");
@@ -739,6 +755,7 @@ export const AuthService = {
 	login,
 	googleLogin,
 	getMe,
+	getSession,
 	refresh,
 	forgotPassword,
 	resendForgotPasswordOtp: forgotPassword,

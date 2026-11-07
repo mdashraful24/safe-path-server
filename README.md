@@ -36,13 +36,13 @@ requests.
 - Authenticated dashboard overview
 - Public contact form with rate limiting, database storage, and email notifications
 - Redis-backed services and scheduled account cleanup
-- Automatic demo account and incident seeding when the server starts
+- Automatic demo account seeding when the server starts
 
 ## Dependencies
 
 ### Runtime
 
-- `express`, `cors`, `helmet`, `compression`, `cookie-parser`
+- `express`, `express-rate-limit`, `cors`, `helmet`, `compression`, `cookie-parser`
 - `@prisma/client`, `@prisma/adapter-pg`, `pg`
 - `jsonwebtoken`, `bcryptjs`, `google-auth-library`
 - `zod`, `http-status`
@@ -100,7 +100,8 @@ bun run db:migrate
 ```
 
 The server automatically runs the seed process during startup. This creates
-the configured demo accounts and demo incidents if they do not already exist.
+the configured demo super admin, admin, and user accounts if they do not
+already exist. Demo incident seeding is currently disabled.
 
 ### Run in Development
 
@@ -133,6 +134,7 @@ http://localhost:5000/health
 bun run typecheck
 bun run format:check
 bun run lint:check
+bun run db:seed
 bun run db:studio
 ```
 
@@ -147,6 +149,14 @@ bun run db:studio
 | Dashboard      | `/api/v1/dashboard`   |
 | Admin          | `/api/v1/admin`       |
 | Super admin    | `/api/v1/super-admin` |
+
+The current browser session can be checked without authentication. The endpoint
+returns the signed-in user or `null` when the access-token cookie is missing or
+invalid:
+
+```text
+GET /api/v1/auth/session
+```
 
 Google sign-in accepts a Google ID token from the frontend:
 
@@ -247,4 +257,4 @@ require an admin or super admin session.
 - Live API: No deployed URL is configured in this repository.
 - Local API health check: http://localhost:5000/health
 - Postman collection: [SafePath Backend Collection](./postman/SafePath.postman_collection.json)
-- Postman collection link: https://documenter.getpostman.com/view/59636503/2sBYHYtdLp
+- Postman collection link: https://documenter.getpostman.com/view/59636503/2sBYHYuHmm

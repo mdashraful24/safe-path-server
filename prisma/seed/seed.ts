@@ -181,5 +181,5 @@ export const seedDatabase = async (): Promise<void> => {
 	await seedSuperAdmin();
 	await seedAdmin();
 	await seedDemoUser();
-	await seedDemoIncidents();
+	// await seedDemoIncidents();
 };

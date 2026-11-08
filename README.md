@@ -59,38 +59,68 @@ requests.
 - `@biomejs/biome`
 - Bun type definitions and Node.js package type definitions
 
-## Local Setup
+## Run Locally
 
-### Requirements
+Follow these steps to install and run the API on localhost.
 
-- Bun
-- Node.js
-- PostgreSQL
-- Redis
-- A Cloudinary account for image uploads
-- An SMTP account for email features
+### 1. Prerequisites
 
-### Installation
+- [Bun](https://bun.sh) (used to install dependencies and run scripts)
+- Node.js (used to run the production build)
+- PostgreSQL (local or hosted)
+- Redis (local or hosted)
+- A Cloudinary account for incident image uploads
+- SMTP credentials for OTP, notification, and contact emails
+
+### 2. Clone and Install Dependencies
 
 ```bash
+git clone <repository-url>
 cd safe-path-server
 bun install
 ```
 
-Create a local environment file:
+### 3. Create the Environment File
+
+Copy the example file and fill in your own values:
 
 ```bash
+# Windows (cmd/PowerShell)
 copy .env.example .env
+
+# macOS/Linux
+cp .env.example .env
 ```
 
-Update `.env` with your PostgreSQL, Redis, JWT, Google, Cloudinary, SMTP, and
-seed configuration values. Never commit the `.env` file or real credentials.
+Never commit `.env` or real credentials. Key variables:
+
+| Group      | Variables                                                                                                  |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| Database   | `DATABASE_URL`                                                                                             |
+| Server     | `PORT`, `NODE_ENV`, `API_PREFIX`, `FRONTEND_URL`, `TRUST_PROXY`                                            |
+| Auth       | `BCRYPT_SALT_ROUNDS`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `JWT_ISSUER`, `JWT_AUDIENCE` |
+| Google     | `GOOGLE_CLIENT_ID` (optional, for Google sign-in)                                                          |
+| Cookies    | `COOKIE_SAME_SITE`, `COOKIE_SECURE`, `COOKIE_DOMAIN`                                                       |
+| Redis      | `REDIS_HOST`, `REDIS_PORT`, `REDIS_USER`, `REDIS_PASSWORD`                                                 |
+| Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`                                     |
+| Email      | `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_SENDER`, `OTP_EXPIRES_IN_SECONDS`, `REGISTRATION_SESSION_EXPIRES_IN_SECONDS` |
+| Seed       | `SEED_ON_START`, `SEED_USER_*`, `SEED_ADMIN_*`, `SEED_SUPER_ADMIN_*`                                       |
 
 For Google sign-in, set `GOOGLE_CLIENT_ID` to the same Web Client ID used by the
 frontend. The API verifies Google ID tokens against this audience; no client
 secret is required.
 
-### Database Setup
+### 4. Start PostgreSQL and Redis
+
+Create a PostgreSQL database and point `DATABASE_URL` at it, for example:
+
+```text
+postgresql://postgres:postgres@localhost:5432/safepath
+```
+
+Start Redis and set the `REDIS_*` values to match your instance.
+
+### 5. Set Up the Database
 
 Generate the Prisma client and apply migrations:
 
@@ -99,33 +129,50 @@ bun run db:generate
 bun run db:migrate
 ```
 
-The server automatically runs the seed process during startup. This creates
-the configured demo super admin, admin, and user accounts if they do not
-already exist. Demo incident seeding is currently disabled.
+The server runs the seed process automatically on startup. This creates the
+configured demo super admin, admin, and user accounts if they do not already
+exist. Demo incident seeding is currently disabled.
 
-### Run in Development
+### 6. Start the Development Server
 
 ```bash
 bun run dev
 ```
+
+With the example configuration (`PORT=5000`, `API_PREFIX=/api/v1`), the API
+base URL is:
+
+```text
+http://localhost:5000/api/v1
+```
+
+Verify the server is running:
+
+```bash
+curl http://localhost:5000/health
+```
+
+The health check is always served from the server root, outside the API prefix.
+
+### Demo Login Credentials
+
+The seed process creates the following role-based accounts from the configured
+`SEED_*` values:
+
+| Role        | Email                       | Password           |
+| ----------- | --------------------------- | ------------------ |
+| User        | `user@safepath.local`       | `User@12345`       |
+| Admin       | `admin@safepath.local`      | `Admin@12345`      |
+| Super admin | `superadmin@safepath.local` | `SuperAdmin@12345` |
+
+These credentials come from the `SEED_*` values in your `.env` file and may
+differ if you customize them. Never use these demo accounts in production.
 
 ### Build and Run in Production Mode
 
 ```bash
 bun run build
 bun start
-```
-
-The default API URL is:
-
-```text
-http://localhost:5000/api/v1
-```
-
-Health check:
-
-```text
-http://localhost:5000/health
 ```
 
 ## Useful Commands
@@ -149,6 +196,55 @@ bun run db:studio
 | Dashboard      | `/api/v1/dashboard`   |
 | Admin          | `/api/v1/admin`       |
 | Super admin    | `/api/v1/super-admin` |
+
+### Endpoint Summary
+
+Authentication (`/api/v1/auth`):
+
+| Method | Path                          | Access        |
+| ------ | ----------------------------- | ------------- |
+| POST   | `/register`                   | Public        |
+| POST   | `/verify-email`               | Public        |
+| POST   | `/resend-otp`                 | Public        |
+| POST   | `/login`                      | Public        |
+| POST   | `/google`                     | Public        |
+| GET    | `/me`                         | Authenticated |
+| GET    | `/session`                    | Public        |
+| POST   | `/refresh-token`              | Public        |
+| POST   | `/forgot-password`            | Public        |
+| POST   | `/resend-forgot-password-otp` | Public        |
+| POST   | `/reset-password`             | Public        |
+| POST   | `/restore/request`            | Public        |
+| POST   | `/restore/verify`             | Public        |
+| POST   | `/logout`                     | Public        |
+
+Users (`/api/v1/users`):
+
+| Method | Path               | Access        |
+| ------ | ------------------ | ------------- |
+| GET    | `/me`              | Authenticated |
+| PATCH  | `/me`              | Authenticated |
+| POST   | `/me/email/verify` | Authenticated |
+| DELETE | `/me/avatar`       | Authenticated |
+| DELETE | `/me`              | Authenticated |
+
+Incidents (`/api/v1/incidents`):
+
+| Method | Path                        | Access        |
+| ------ | --------------------------- | ------------- |
+| GET    | `/`                         | Public        |
+| POST   | `/`                         | Authenticated |
+| GET    | `/my-incidents`             | Authenticated |
+| GET    | `/my-incidents/:incidentId` | Authenticated |
+| PATCH  | `/my-incidents/:incidentId` | Authenticated |
+| DELETE | `/my-incidents/:incidentId` | Authenticated |
+| GET    | `/:incidentId`              | Public        |
+
+Dashboard (`/api/v1/dashboard`):
+
+| Method | Path        | Access        |
+| ------ | ----------- | ------------- |
+| GET    | `/overview` | Authenticated |
 
 The current browser session can be checked without authentication. The endpoint
 returns the signed-in user or `null` when the access-token cookie is missing or
@@ -251,6 +347,15 @@ The list supports `page`, `limit`, `searchTerm`, `status`, `topic`, and
 `sortOrder`. Replying stores the reply, marks the message as `RESOLVED`, and
 automatically emails the address that submitted the contact form. These routes
 require an admin or super admin session.
+
+### Reference Values
+
+- Roles: `USER`, `ADMIN`, `SUPER_ADMIN`
+- Incident categories: `HARASSMENT`, `THEFT`, `SUSPICIOUS_ACTIVITY`, `UNSAFE_AREA`, `OTHER`
+- Incident statuses: `PENDING`, `APPROVED`, `REJECTED`
+- User statuses: `ACTIVE`, `BLOCKED`, `PENDING_DELETION`, `DELETED`, `PURGED`
+- Contact topics: `GENERAL`, `REPORT_ISSUE`, `ACCOUNT`, `SAFETY`, `PARTNERSHIP`, `OTHER`
+- Contact statuses: `NEW`, `IN_PROGRESS`, `RESOLVED`
 
 ## Links
 
